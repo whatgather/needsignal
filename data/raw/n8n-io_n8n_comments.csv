@@ -1,0 +1,616 @@
+repository,issue_number,comment_id,position_in_thread,comment_body,comment_length,author_association,user_type,created_at,updated_at,comment_url
+n8n-io/n8n,34713,5045330596,1,"Hey @louisvanempel,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9051"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9051](https://linear.app/n8n/issue/GHC-9051)",498,CONTRIBUTOR,Bot,2026-07-22T11:39:45Z,2026-07-22T11:39:45Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5045330596
+n8n-io/n8n,34713,5048212884,2,"Hey! @louisvanempel thanks for reporting this! 
+
+I authored the `aud` fix in #30558, and reading your analysis, I think you're spot-on that there's a mint/verify asymmetry. Before I dig into the source, a couple of quick questions:
+
+**1. Did this ever work for you on 2.26.6?** You mentioned upgrading from there, was Instance-level MCP via OAuth already working before the upgrade, or is this the first time you've tried connecting that way?
+
+**2. The decoded token from `oauth_access_tokens`**, you pulled that straight from Postgres, right? And just to confirm, it's `sub` only, no `userId` or `extra` claim anywhere?
+
+**3. For the `POST /mcp-oauth/register` 500**, is that 100% reproducible when the redirect allowlist is empty? Does it also 500 if the allowlist is populated but the payload is malformed, or only on the empty allowlist case?
+
+**4. Claude's error is pretty generic.** If you replay that authenticated request to `/mcp-server/http` manually (curl, Postman, whatever) with the minted token, what status and body does n8n actually return?
+
+Looking forward to your reply!
+
+
+Also, I think I can work on this as of now, I'll let you know. Keeping the new Contributing Guidelines in mind, I won't be opening a PR out of nowhere, and I don't want to ping any maintainer right now. So if anyone notices this, please let me know after we verify how deep the issue is. That way we can figure out whether this is something the team wants to pick up or open for community contributions.
+
+Thanks! ",1504,CONTRIBUTOR,User,2026-07-22T15:39:01Z,2026-07-22T15:43:31Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5048212884
+n8n-io/n8n,34713,5055258847,3,"Thanks for the quick response @sinehypernova-0718! We ran another measurement round this morning and the results partially falsify my own original analysis, so an important correction first.
+
+**New headline finding: manual replay of the minted token against the MCP endpoint succeeds.** `POST /mcp-server/http` with `Authorization: Bearer <token>`, using the exact token minted by a *failing* Claude connect attempt (pulled from `oauth_access_tokens`), returns **200** with a complete `initialize` result (`n8n MCP Server 1.1.0`, full instructions payload). So mint and verify are consistent when replayed via curl. The failure only manifests when Claude itself completes the flow: every Claude connect attempt still ends in `McpAuthorizationError` (""Your account was authorized, but the integration rejected the credentials it just issued""), 100% reproducible, on both Claude web and desktop. The asymmetry is therefore not mint-vs-verify but **curl-vs-Claude**: whatever Claude does with or after the token exchange differs from a plain initialize POST, and that is what gets rejected.
+
+Your questions:
+
+1. **Did this ever work on 2.26.6?** No, and 2.26.6 can't be judged either way: the instance sat behind Cloudflare Access until yesterday, which intercepted every unauthenticated request before it reached n8n (that was our first-layer problem, since fixed with path bypasses). This is the first version where the OAuth flow has actually reached n8n. 2.26.6 also only advertised read scopes.
+
+2. **Token straight from Postgres?** Yes, `SELECT` from `oauth_access_tokens`, payload base64-decoded locally. Claims are exactly: `sub`, `aud`, `client_id`, `jti`, `iat`, `exp`, `meta:{isOAuth:true}`. No `userId`, no `extra`, no `iss`. Note: despite the sub-only shape, curl replay verifies fine, so whatever maps `sub` internally appears to work.
+
+3. **Trace logging:** enabled (`N8N_LOG_LEVEL=trace`, confirmed active in the container). Result: nothing at all from the OAuth/MCP middleware. Not on the register 500s, not on the failing Claude attempts, and not even on a successful authenticated initialize. Those code paths appear to emit no log lines at any level.
+
+4. **Register 500 reproducibility:** with an *empty* redirect allowlist it is 100% reproducible, both with a minimal payload (`client_name` + `redirect_uris` only) and with a full RFC 7591 payload. With a *populated* allowlist, the full payload succeeds (client_id returned), but the minimal payload (missing `grant_types`/`response_types`) still returns the same generic 500 rather than a 4xx validation error.
+
+5. **Manual replay:** see headline, 200 plus full initialize result. We also verified it is independent of accumulated state: replay succeeds with multiple access-token rows present, and with the newest token from a just-failed Claude attempt. Data point: our connect attempts have left 10 rows in `oauth_refresh_tokens` (roughly one exchange per attempt).
+
+**Remaining suspects**, given curl-works-but-Claude-fails: something in the request(s) Claude makes beyond a plain `POST initialize` (the streamable-HTTP `GET` listen stream, `mcp-session-id` handling, protocol-version negotiation, or an immediate refresh-token grant), or Claude rejecting the shape of the `/mcp-oauth/token` response client-side. Happy to run any probe you want against this instance (GET stream with Bearer, `tools/list` follow-up, refresh grant replay); we can reproduce on demand.
+
+Environment unchanged from the issue: 2.31.4 Docker self-hosted, Postgres 16, single public hostname, cloudflared in front, `N8N_PROXY_HOPS=1`, no `N8N_MCP_BASE_URL`. Claude flow references for Anthropic-side correlation: ofid_8a352ef797e14fa1 (today), ofid_a60bdd30db30b192 and ofid_7f851851c1eda01b (yesterday).
+
+Kind regards,
+Louis van Empel
+",3788,NONE,User,2026-07-23T06:38:20Z,2026-07-23T06:39:27Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5055258847
+n8n-io/n8n,34713,5059578167,4,"Hey @louisvanempel ! Apologies for the late reply, thanks for the follow-up, this seems interesting. The fact that curl replay works means the token itself is fine, and the rejection happens somewhere in Claude's specific request pattern.
+
+A few questions again 🙂
+
+**1. Can you tail your Cloudflare tunnel logs while triggering a Claude connect?** Run `cloudflared tunnel --log-level debug` and trigger the failure, we need the exact sequence of HTTP methods and paths Claude hits (any `GET /mcp-server/http`, `POST /mcp-oauth/token`, etc.) and which one returns non-200.
+
+**2. Can you replay the refresh-token grant manually?** Using the refresh token from `oauth_refresh_tokens`, try:
+```bash
+curl -X POST https://<host>/mcp-oauth/token \
+  -H ""Content-Type: application/x-www-form-urlencoded"" \
+  -d ""grant_type=refresh_token&refresh_token=<token>&client_id=<client_id>""
+```
+Does this succeed or fail?
+
+**3. Can you try a `GET /mcp-server/http` with the access token?** The MCP spec uses `GET` for SSE streaming:
+```bash
+curl -N https://<host>/mcp-server/http \
+  -H ""Authorization: Bearer <token>"" \
+  -H ""Accept: text/event-stream"" \
+  -H ""Mcp-Session-Id: test-session""
+```
+Does this get rejected differently from `POST`?
+
+**4. What does the `/mcp-oauth/token` response look like?** The full JSON body when exchanging the auth code, does it include `token_type`, `expires_in`, `scope`, etc.? Claude's client might be strict about the response shape.
+
+The 10 `oauth_refresh_tokens` rows are the biggest clue, Claude might be successfully getting an access token, then immediately failing on refresh or stream setup.
+",1620,CONTRIBUTOR,User,2026-07-23T14:25:11Z,2026-07-23T14:25:11Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5059578167
+n8n-io/n8n,34713,5060089239,5,"Ran all your probes. **I think we found the failing call: the `GET /mcp-server/http` listen stream hangs indefinitely.**
+
+**3) GET with the access token (the headline):** with a freshly minted, provably valid token (obtained seconds earlier via a successful refresh grant), `GET /mcp-server/http` with `Authorization: Bearer`, `Accept: text/event-stream` and an `Mcp-Session-Id` header returns **nothing at all**: no status line, no headers, zero bytes, for the full 15s curl timeout (`HTTP_CODE:000`, curl exit 28). For comparison, a `POST initialize` with the *same* token responds immediately with 200 and an SSE event. Per the streamable-HTTP spec the server should either open the SSE stream right away (200 + headers) or return 405 if the listen stream is unsupported; an indefinite hang is neither. If Claude opens this GET stream during connect, a client-side timeout there would surface exactly as ""the integration rejected the credentials it just issued"". This is now my prime suspect.
+
+And it's not session-related: the GET hang is identical *without* the `Mcp-Session-Id` header. Same zero-byte response, no status line or headers, `HTTP_CODE:000`, curl exit 28 after the 15s timeout. The GET handler itself never responds, regardless of session headers. Happy to test more variants on request (e.g. a session id echoed from a real initialize).
+
+**2) Refresh grant replay:** two results.
+- Without `client_secret`: 400 `invalid_client` (""Client secret is required"").
+- With the secret: **200** with a fresh token pair. So the refresh path itself works.
+
+That 400 turned out to be correct behavior, because of a side finding: this Claude-registered client has `token_endpoint_auth_method = client_secret_post` with an issued secret, i.e. a *confidential* client. Meanwhile my own DCR test client, which explicitly requested `""token_endpoint_auth_method"":""none""`, got `none`. So either Claude requests `client_secret_post`, or the register handler assigns it when the field is omitted (RFC 7591's default would be `client_secret_basic`); worth checking the handler default. Second side finding: the client secret is stored **in plaintext** in `oauth_clients` (I authenticated using the DB column value directly), which looks like a hardening candidate.
+
+**4) Token response shape:** `{""access_token"":""..."",""token_type"":""Bearer"",""expires_in"":3600,""refresh_token"":""...""}`. No `scope` field. That's permitted by RFC 6749 §5.1 when the granted scope equals the requested one, but noting it in case Claude's client is strict about it.
+
+**1) Tunnel logs:** probably unnecessary now that the failing call is identified, and SSE buffering by the tunnel can be ruled out since the POST SSE response passes through instantly. I can still run a cloudflared debug round if you want the exact request sequence Claude makes.
+
+**Working theory:** DCR → consent → code exchange all succeed; Claude then opens (or attempts) the GET listen stream, which never responds; Claude times out and reports `McpAuthorizationError`. The GET handler hanging instead of returning 200 or 405 looks like the server-side bug to chase.
+",3130,NONE,User,2026-07-23T15:12:02Z,2026-07-23T15:12:02Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5060089239
+n8n-io/n8n,34713,5060528470,6,"@louisvanempel thanks for the reply! This is genuinely some impressive detective work. The `GET /mcp-server/http` indefinite hang is clearly the real culprit here, not the token verification path I initially suspected.
+
+I'm going to dig into the MCP server route handlers on my end to see why `GET` hangs while `POST` responds normally, the SSE listen stream implementation (or lack thereof) is the obvious place to look.
+
+I'll update here once I've traced the code and let you know the findings, and then we can decide the approach. If the team likes the approach, I'll open the PR!
+
+Let me know if you find anything else in the meantime.
+
+Thank you!
+",652,CONTRIBUTOR,User,2026-07-23T15:54:50Z,2026-07-23T16:58:33Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5060528470
+n8n-io/n8n,34713,5063917842,7,"Hii! 
+
+I independently reproduced this on my end: `POST /mcp-server/http` with a valid token returns 200 and a full initialize result, while `GET /mcp-server/http` with the same token hangs indefinitely (curl timeout, zero bytes). This confirms your causal chain exactly. And, after going through the code I can say:
+
+### What is happening (briefly)
+
+The `GET` handler in `mcp.controller.ts` calls `handleTransportRequest` without a body. The SDK's `StreamableHTTPServerTransport` in stateless mode (`sessionIdGenerator: undefined`) creates a `ReadableStream` that never gets closed, and the Node server listener waits forever for `done: true` that never comes. Hence, it hangs. `POST` works because the SDK processes the body and finishes the response cycle normally.
+
+### Approach for the fix
+
+**Short term: return 405 Method Not Allowed** on `GET` before entering the transport. This is spec-compliant (Streamable HTTP allows servers to decline the listen stream), stops the hang immediately, and unblocks all MCP clients since they can still use `POST` for request/response.
+
+**Long term: full SSE streaming** behind a feature flag. This would need session management, an SSE connection registry, event bridging, heartbeats, backpressure handling, and multi-instance considerations. The architecture for this is well understood, but it is a 600-1000+ line feature that needs proper design review.
+
+Even though, I believe the full streaming implementation is solid and scalable, but I guess the team would like to take this on internally as it as an architectural change (I'm happy to contribute btw, if the team agrees 😄) So, the 405 fix seems reasonable for now.
+
+Looks like this has been assigned to the @n8n-io/adore team so, if anyone can guide me then It'd be great!
+
+Thank You!",1787,CONTRIBUTOR,User,2026-07-23T21:54:48Z,2026-07-23T21:55:05Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5063917842
+n8n-io/n8n,34713,5066714164,8,"Fantastic work, thank you for reproducing and tracing it. The root cause you describe matches every behavior we observed on this end, including why POST completes normally while GET waits forever.
+
+From the reporter's perspective: the short-term 405 on GET would fully unblock us. Our replay already proved the POST request/response path works end to end (200 with a complete initialize result), and spec-wise clients must tolerate a 405 on the listen stream, so Claude should fall back to POST-only operation and connect.
+
+Happy to validate any fix build against this production instance with both Claude web and Claude desktop. We can reproduce the failing connect on demand, so turnaround on real-world verification is quick.
+
+",736,NONE,User,2026-07-24T06:11:30Z,2026-07-24T06:11:30Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5066714164
+n8n-io/n8n,34713,5070519067,9,"Hey @louisvanempel! Just a heads up, the team opened #34835 as you can see it linked to the issue, which implements the exact same 405 fix we discussed above.
+
+So, it looks like this wasn't open for community contributions after all, but the team has it handled and it should land.
+Glad to see the fix going in either way, your detailed repro and trace made the root cause unambiguous, which must have helped move this quickly.
+
+Thanks again for the excellent debugging on your end.",482,CONTRIBUTOR,User,2026-07-24T13:43:28Z,2026-07-24T13:43:28Z,https://github.com/n8n-io/n8n/issues/34713#issuecomment-5070519067
+n8n-io/n8n,34708,5045159515,1,"Hey @tusharmotwani1718,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9050"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9050](https://linear.app/n8n/issue/GHC-9050)",502,CONTRIBUTOR,Bot,2026-07-22T11:19:40Z,2026-07-22T11:19:40Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5045159515
+n8n-io/n8n,34708,5045839775,2,"On investigating further down the api, I found that the notion doesn't exposes the return type for formula properties directly while fetching the properties of the data source.
+
+Instead to get the return type, we need to call the api for ""Query a single page"" i.e. `data_sources/${dataSourceId}/query`. 
+
+Although, using this extra api call has both:
+
+**Pros**:
+- Better UX
+- Prevents invalid filter combinations
+- No confusing Notion validation errors
+
+**Cons**:
+- Extra API request while configuring the node
+- Slower parameter loading
+
+This is an important design decision and over to n8n team.
+
+also, I can raise PR for this if you guys agree to change the current flow a bit and add an extra api call.",706,NONE,User,2026-07-22T12:36:41Z,2026-07-24T05:32:07Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5045839775
+n8n-io/n8n,34708,5058712171,3,This seems to be a duplicate of: https://github.com/n8n-io/n8n/issues/34590,75,MEMBER,User,2026-07-23T13:04:42Z,2026-07-23T13:04:42Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5058712171
+n8n-io/n8n,34708,5060252326,4,"> This seems to be a duplicate of: [#34590](https://github.com/n8n-io/n8n/issues/34590)
+
+Just checked out the issue #34590
+
+While both the issues seem similar, there is a slight difference between them.
+
+#34590 issue is about fetching the pages with unknown formula type.
+
+However this issue is about showing fixed return type in n8n ui for already present formula return type to avoid inconsistent parameters.
+
+That means the formula already has a return type and it is fixed so the n8n ui should only show that return type instead of giving a fixed list of options everytime.
+
+Have also shared my technical investigation over the current working notion node in this issue's comment.
+",685,NONE,User,2026-07-23T15:27:39Z,2026-07-23T15:28:19Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5060252326
+n8n-io/n8n,34708,5060274093,5,"@tusharmotwani1718 Good to know, thank you 🙌 
+",46,MEMBER,User,2026-07-23T15:29:40Z,2026-07-23T15:29:40Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5060274093
+n8n-io/n8n,34708,5067988715,6,Hi! I'd like to work on this issue. I have experience with AI/ML projects and this aligns well with my skills. I'll submit a PR soon! 🚀,135,NONE,User,2026-07-24T08:51:05Z,2026-07-24T08:51:05Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5067988715
+n8n-io/n8n,34708,5068451116,7,@eslam-ahmed43 this issue is already team assigned.,51,NONE,User,2026-07-24T09:47:07Z,2026-07-24T09:47:07Z,https://github.com/n8n-io/n8n/issues/34708#issuecomment-5068451116
+n8n-io/n8n,34521,5016551247,1,"Hey @johnhlebov,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9016"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9016](https://linear.app/n8n/issue/GHC-9016)",495,CONTRIBUTOR,Bot,2026-07-19T16:48:25Z,2026-07-19T16:48:25Z,https://github.com/n8n-io/n8n/issues/34521#issuecomment-5016551247
+n8n-io/n8n,34521,5016696678,2,"@johnhlebov do you have more details? I am not sure what ""no"" is an error but I assume you have screenshots of the execution log as well which could be useful?
+
+With 59 minutes I would expect it to be triggered at minute 59 past every hour ",240,MEMBER,User,2026-07-19T17:29:37Z,2026-07-19T17:29:37Z,https://github.com/n8n-io/n8n/issues/34521#issuecomment-5016696678
+n8n-io/n8n,34521,5024693000,3,"Hei Jon, 
+
+There should be attached screenshots for the panel triggering the event. 
+
+Duplicating them here: https://drive.google.com/file/d/1JCKcA05itcaSRbvgvhLNJlpfNwc_CJwC/view?usp=sharing
+https://drive.google.com/file/d/1IHO_mCuE-h0m85N3tK-CN1ISg2g2Srys/view?usp=sharing
+
+_With 59 minutes I would expect it to be triggered at minute 59 past every hour_ - would it mean one triggered at 00:59 and the next on at 01:00? This was the case with my workspace. 
+
+There is not actual error, there is this bug with triggering not every 59 minutes, but twice during the hour.
+
+Thank you for attention. ",597,NONE,User,2026-07-20T16:39:11Z,2026-07-20T16:39:11Z,https://github.com/n8n-io/n8n/issues/34521#issuecomment-5024693000
+n8n-io/n8n,34521,5067989767,4,Hi! I'd like to work on this issue. I have experience with AI/ML projects and this aligns well with my skills. I'll submit a PR soon! 🚀,135,NONE,User,2026-07-24T08:51:12Z,2026-07-24T08:51:12Z,https://github.com/n8n-io/n8n/issues/34521#issuecomment-5067989767
+n8n-io/n8n,34521,5073720698,5,@eslam-ahmed43 we will handle this as we are working on improvements to our schedular.,86,MEMBER,User,2026-07-24T19:45:36Z,2026-07-24T19:45:36Z,https://github.com/n8n-io/n8n/issues/34521#issuecomment-5073720698
+n8n-io/n8n,34521,5074867738,6,"Thank you @eslam-ahmed43 @Joffcom !
+
+Would it be possible to refresh my triggers count? The issue spent them all and the account is stuck now for this period. 
+
+Appreciate your time and assist. 
+
+Thanks ",203,NONE,User,2026-07-24T22:04:51Z,2026-07-24T22:04:51Z,https://github.com/n8n-io/n8n/issues/34521#issuecomment-5074867738
+n8n-io/n8n,34645,5034777306,1,"Hey @andreiradu2102,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9041"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9041](https://linear.app/n8n/issue/GHC-9041)",499,CONTRIBUTOR,Bot,2026-07-21T13:41:52Z,2026-07-21T13:41:52Z,https://github.com/n8n-io/n8n/issues/34645#issuecomment-5034777306
+n8n-io/n8n,34645,5034816812,2,"I also tried to use newer versions of n8n, but the issue still remains. Same problem as in 2.27.5.",98,NONE,User,2026-07-21T13:45:40Z,2026-07-21T13:45:40Z,https://github.com/n8n-io/n8n/issues/34645#issuecomment-5034816812
+n8n-io/n8n,34645,5041963919,3,"I have generated a clean, minimal ""Proof of Concept"" JSON workflow:
+
+**Minimal Bug Report Workflow:**
+```json
+{
+  ""nodes"": [
+    {
+      ""parameters"": { ""responseMode"": ""responseNode"" },
+      ""type"": ""n8n-nodes-base.chatTrigger"",
+      ""typeVersion"": 1,
+      ""position"": [240, 80],
+      ""id"": ""chat-trigger-received"",
+      ""name"": ""When chat message received""
+    },
+    {
+      ""parameters"": {
+        ""maxIterations"": 4,
+        ""returnIntermediateSteps"": true,
+        ""systemMessage"": ""When the user's message starts with TEST: 1. Extract the arithmetic expression. 2. Call the Calculator tool exactly once. 3. Do not calculate it yourself.""
+      },
+      ""type"": ""@n8n/n8n-nodes-langchain.agent"",
+      ""typeVersion"": 3.1,
+      ""position"": [480, 80],
+      ""id"": ""ai-agent"",
+      ""name"": ""AI Agent""
+    },
+    {
+      ""parameters"": {},
+      ""type"": ""@n8n/n8n-nodes-langchain.lmChatOllama"",
+      ""typeVersion"": 1,
+      ""position"": [480, 280],
+      ""id"": ""ollama-chat-model"",
+      ""name"": ""Ollama Chat Model""
+    },
+    {
+      ""parameters"": {},
+      ""type"": ""@n8n/n8n-nodes-langchain.toolCalculator"",
+      ""typeVersion"": 1,
+      ""position"": [240, 480],
+      ""id"": ""calculator-tool"",
+      ""name"": ""Calculator""
+    },
+    {
+      ""parameters"": {
+        ""mode"": ""sendAndWait"",
+        ""approvalType"": ""approveAndDisapprove"",
+        ""options"": {}
+      },
+      ""type"": ""@n8n/n8n-nodes-langchain.chatHitlTool"",
+      ""typeVersion"": 1,
+      ""position"": [480, 480],
+      ""id"": ""chat-human-review"",
+      ""name"": ""Chat - Human Review""
+    }
+  ],
+  ""connections"": {
+    ""When chat message received"": {
+      ""main"": [ [ { ""node"": ""AI Agent"", ""type"": ""main"", ""index"": 0 } ] ]
+    },
+    ""AI Agent"": {
+      ""ai_languageModel"": [ [ { ""node"": ""Ollama Chat Model"", ""type"": ""ai_languageModel"", ""index"": 0 } ] ],
+      ""ai_tool"": [ [ { ""node"": ""Chat - Human Review"", ""type"": ""ai_tool"", ""index"": 0 } ] ]
+    },
+    ""Chat - Human Review"": {
+      ""ai_tool"": [ [ { ""node"": ""Calculator"", ""type"": ""ai_tool"", ""index"": 0 } ] ]
+    }
+  }
+}
+",2043,NONE,User,2026-07-22T04:47:37Z,2026-07-22T04:47:37Z,https://github.com/n8n-io/n8n/issues/34645#issuecomment-5041963919
+n8n-io/n8n,34645,5043440103,4,"@andreiradu2102 Can you try updating to this weeks release, This should be fixed in #34271 (merged 2026-07-17, ships in n8n 2.32.0)",131,MEMBER,User,2026-07-22T08:08:42Z,2026-07-22T08:08:42Z,https://github.com/n8n-io/n8n/issues/34645#issuecomment-5043440103
+n8n-io/n8n,34645,5043559304,5,"Tried it, it is working. Thank you, @Joffcom ! Thanks for clarifying, I did not see an issue was already opened before, but thanks for pointing it out and guiding me in the right direction. Have a nice day!
+",207,NONE,User,2026-07-22T08:21:55Z,2026-07-22T08:21:55Z,https://github.com/n8n-io/n8n/issues/34645#issuecomment-5043559304
+n8n-io/n8n,34645,5045448411,6,"@andreiradu2102 no problem, thanks for confirming it is all good now.",69,MEMBER,User,2026-07-22T11:53:22Z,2026-07-22T11:53:22Z,https://github.com/n8n-io/n8n/issues/34645#issuecomment-5045448411
+n8n-io/n8n,34829,5064397183,1,"Hey @jpc312,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9067"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9067](https://linear.app/n8n/issue/GHC-9067)",491,CONTRIBUTOR,Bot,2026-07-23T23:06:13Z,2026-07-23T23:06:13Z,https://github.com/n8n-io/n8n/issues/34829#issuecomment-5064397183
+n8n-io/n8n,34829,5067992357,2,Hi! I'd like to work on this issue. I have experience with AI/ML projects and this aligns well with my skills. I'll submit a PR soon! 🚀,135,NONE,User,2026-07-24T08:51:27Z,2026-07-24T08:51:27Z,https://github.com/n8n-io/n8n/issues/34829#issuecomment-5067992357
+n8n-io/n8n,34829,5068370324,3,"Hey @jpc312,
+
+This was fixed as part of the work done in #34694 which should be available in the next release.",110,MEMBER,User,2026-07-24T09:37:00Z,2026-07-24T09:37:00Z,https://github.com/n8n-io/n8n/issues/34829#issuecomment-5068370324
+n8n-io/n8n,34829,5072393198,4,"@Joffcom - fantastic, thanks for the update!",44,NONE,User,2026-07-24T17:03:35Z,2026-07-24T17:03:35Z,https://github.com/n8n-io/n8n/issues/34829#issuecomment-5072393198
+n8n-io/n8n,34829,5072676502,5,"@Joffcom Thank you! When can we expect the next release, any ideas? ",68,NONE,User,2026-07-24T17:31:08Z,2026-07-24T17:31:08Z,https://github.com/n8n-io/n8n/issues/34829#issuecomment-5072676502
+n8n-io/n8n,34519,5016492500,1,"Thank you for taking the time to submit this issue! Unfortunately, it looks like the issue template hasn’t been fully completed. The template is crucial because it helps us understand the problem better and resolve it more efficiently.
+
+We’ll go ahead and close this issue for now. If you’d still like assistance, please feel free to reopen the issue after filling out the required information in the template. Alternatively, you can create a new issue using the template to provide the missing details.
+
+We appreciate your understanding and look forward to assisting you further once we have all the necessary information!",623,CONTRIBUTOR,Bot,2026-07-19T16:30:38Z,2026-07-19T16:30:38Z,https://github.com/n8n-io/n8n/issues/34519#issuecomment-5016492500
+n8n-io/n8n,34519,5016498230,2,What is the problem?,20,NONE,User,2026-07-19T16:32:21Z,2026-07-19T16:32:21Z,https://github.com/n8n-io/n8n/issues/34519#issuecomment-5016498230
+n8n-io/n8n,34519,5016687826,3,"@rrcc08 a lack of detail looking at it, there is no minimal workflow example to reproduce it and I can't see the error in the images.",133,MEMBER,User,2026-07-19T17:26:50Z,2026-07-19T17:26:50Z,https://github.com/n8n-io/n8n/issues/34519#issuecomment-5016687826
+n8n-io/n8n,34519,5018173446,4,"Oh, sorry, I confused the case",30,NONE,User,2026-07-20T02:14:38Z,2026-07-20T02:14:38Z,https://github.com/n8n-io/n8n/issues/34519#issuecomment-5018173446
+n8n-io/n8n,34519,5018280939,5,"Sorry, now it works, I didn't change anything, I suppose it was just a little bug.",82,NONE,User,2026-07-20T02:41:14Z,2026-07-20T02:41:14Z,https://github.com/n8n-io/n8n/issues/34519#issuecomment-5018280939
+n8n-io/n8n,34618,5033335142,1,"Hey @SMillerDev,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9036"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9036](https://linear.app/n8n/issue/GHC-9036)",495,CONTRIBUTOR,Bot,2026-07-21T11:23:30Z,2026-07-21T11:23:30Z,https://github.com/n8n-io/n8n/issues/34618#issuecomment-5033335142
+n8n-io/n8n,34618,5044458943,2,"Hello @SMillerDev, thanks for your report! I am currently looking into it but failing to reproduce it. Could you provide more details about node configuration you're using?
+- What's the node version you're using? It can be viewed in settings of the node
+- Does your node have `Limit Pages Fetched` parameter enabled?",316,CONTRIBUTOR,User,2026-07-22T09:58:59Z,2026-07-22T09:58:59Z,https://github.com/n8n-io/n8n/issues/34618#issuecomment-5044458943
+n8n-io/n8n,34618,5044480822,3,"Hi, the version is `HTTP Request node version 4.4 (Latest)`. `Limit Pages` is disabled.",87,CONTRIBUTOR,User,2026-07-22T10:01:03Z,2026-07-22T10:01:03Z,https://github.com/n8n-io/n8n/issues/34618#issuecomment-5044480822
+n8n-io/n8n,34618,5044521907,4,Could you share the full node configuration?,44,CONTRIBUTOR,User,2026-07-22T10:05:35Z,2026-07-22T10:05:35Z,https://github.com/n8n-io/n8n/issues/34618#issuecomment-5044521907
+n8n-io/n8n,34618,5044703865,5,"Okay, in an attempt to simplify the node I spotted a note in the API documentation I previously overlooked. It seems like the node was correct in it's lack of pagination because I configured it wrong. Sorry for wasting your time, thank you for your work on n8n.",261,CONTRIBUTOR,User,2026-07-22T10:26:32Z,2026-07-22T10:26:32Z,https://github.com/n8n-io/n8n/issues/34618#issuecomment-5044703865
+n8n-io/n8n,34548,5021326321,1,"Hey @kovkyr,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9025"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9025](https://linear.app/n8n/issue/GHC-9025)",491,CONTRIBUTOR,Bot,2026-07-20T10:38:56Z,2026-07-20T10:38:56Z,https://github.com/n8n-io/n8n/issues/34548#issuecomment-5021326321
+n8n-io/n8n,34548,5021346876,2,@kovkyr Which LDAP provider are you using? I have a workflow running that tests the node against OpenLDAP and it seems to be working on the latest release.,155,MEMBER,User,2026-07-20T10:41:29Z,2026-07-20T10:41:29Z,https://github.com/n8n-io/n8n/issues/34548#issuecomment-5021346876
+n8n-io/n8n,34548,5021421435,3,"@Joffcom Windows Server 2022 Standard
+
+In test environment both built-in and n8n-nodes-ldap@0.1.10 works on Windows Server 2019 Standard. Built-in node works after n8n-nodes-ldap@0.1.10  node unistall.
+
+But in prod environment only n8n-nodes-ldap@0.1.10 works on Windows Server 2022 Standard.
+",293,NONE,User,2026-07-20T10:50:48Z,2026-07-20T10:54:19Z,https://github.com/n8n-io/n8n/issues/34548#issuecomment-5021421435
+n8n-io/n8n,34548,5022810810,4,Just updated n8n containers version from 2.21.5 to 2.31.4 and built-in LDAP working now on Windows Server 2022 Standard ldap provider. The problem can be closed.,161,NONE,User,2026-07-20T13:30:49Z,2026-07-20T13:30:49Z,https://github.com/n8n-io/n8n/issues/34548#issuecomment-5022810810
+n8n-io/n8n,34389,4999395373,1,"Thank you for taking the time to submit this issue! Unfortunately, it looks like the issue template hasn’t been fully completed. The template is crucial because it helps us understand the problem better and resolve it more efficiently.
+
+We’ll go ahead and close this issue for now. If you’d still like assistance, please feel free to reopen the issue after filling out the required information in the template. Alternatively, you can create a new issue using the template to provide the missing details.
+
+We appreciate your understanding and look forward to assisting you further once we have all the necessary information!",623,CONTRIBUTOR,Bot,2026-07-17T05:43:27Z,2026-07-17T05:43:27Z,https://github.com/n8n-io/n8n/issues/34389#issuecomment-4999395373
+n8n-io/n8n,34389,4999559733,2,@kenneth-urbanrest how did you make the workflow? It looks like you have an invalid node in there. ,99,MEMBER,User,2026-07-17T06:08:32Z,2026-07-17T06:08:32Z,https://github.com/n8n-io/n8n/issues/34389#issuecomment-4999559733
+n8n-io/n8n,34389,4999658989,3,"Thank you for taking the time to submit this issue! Unfortunately, it looks like the issue template hasn’t been fully completed. The template is crucial because it helps us understand the problem better and resolve it more efficiently.
+
+We’ll go ahead and close this issue for now. If you’d still like assistance, please feel free to reopen the issue after filling out the required information in the template. Alternatively, you can create a new issue using the template to provide the missing details.
+
+We appreciate your understanding and look forward to assisting you further once we have all the necessary information!",623,CONTRIBUTOR,Bot,2026-07-17T06:23:32Z,2026-07-17T06:23:32Z,https://github.com/n8n-io/n8n/issues/34389#issuecomment-4999658989
+n8n-io/n8n,34756,5055017194,1,"Hey @AndreaLeto00,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9058"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9058](https://linear.app/n8n/issue/GHC-9058)",497,CONTRIBUTOR,Bot,2026-07-23T06:03:12Z,2026-07-23T06:03:12Z,https://github.com/n8n-io/n8n/issues/34756#issuecomment-5055017194
+n8n-io/n8n,34756,5059787064,2,"Could not replicate the issue in 2.32.3. Any step that you might have missed in how to reproduce the issue? 
+
+<img width=""800"" height=""438"" alt=""Image"" src=""https://github.com/user-attachments/assets/8bd53bd2-4a6d-4716-9f29-2995762eb098"" />",240,CONTRIBUTOR,User,2026-07-23T14:43:33Z,2026-07-23T14:43:33Z,https://github.com/n8n-io/n8n/issues/34756#issuecomment-5059787064
+n8n-io/n8n,34756,5066568126,3,"Hi, thanks for your reply.
+The issue doesn't occur with the Postgres Trigger node. Instead, it happens with the Postgres node when selecting rows from the database or running a query. I've attached a video to show the issue.
+
+https://github.com/user-attachments/assets/a037c1a6-f865-4131-85a4-fafe595461ab",305,NONE,User,2026-07-24T05:46:43Z,2026-07-24T05:46:43Z,https://github.com/n8n-io/n8n/issues/34756#issuecomment-5066568126
+n8n-io/n8n,34614,5032196307,1,"Hey @HKANT100,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9034"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9034](https://linear.app/n8n/issue/GHC-9034)",493,CONTRIBUTOR,Bot,2026-07-21T09:13:48Z,2026-07-21T09:13:48Z,https://github.com/n8n-io/n8n/issues/34614#issuecomment-5032196307
+n8n-io/n8n,34614,5032213150,2,"<img width=""949"" height=""562"" alt=""Image"" src=""https://github.com/user-attachments/assets/6f5d028e-7e77-480e-b32f-9fcb026fe384"" />",130,NONE,User,2026-07-21T09:15:36Z,2026-07-21T09:15:36Z,https://github.com/n8n-io/n8n/issues/34614#issuecomment-5032213150
+n8n-io/n8n,34614,5043566909,3,@HKANT100 please email the support team using help@n8n.io and they will be able to look into your instance to see what might be going wrong.,140,MEMBER,User,2026-07-22T08:22:49Z,2026-07-22T08:22:49Z,https://github.com/n8n-io/n8n/issues/34614#issuecomment-5043566909
+n8n-io/n8n,34545,5020837803,1,"Hey @lucianodsantana,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9023"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9023](https://linear.app/n8n/issue/GHC-9023)",500,CONTRIBUTOR,Bot,2026-07-20T09:40:39Z,2026-07-20T09:40:39Z,https://github.com/n8n-io/n8n/issues/34545#issuecomment-5020837803
+n8n-io/n8n,34545,5021006633,2,"Our n8n instance is currently running version 2.20.11 (Cloud), which is approximately 10 versions behind the current release.
+
+We are experiencing recurring Task Runner timeout errors:
+
+Task request timed out after 20 seconds
+
+We have already optimized the workflow and verified that the issue is not related to workflow logic. The errors occur while waiting for a Task Runner to execute Code nodes.
+
+Could you please:
+
+Update our instance to the latest stable version.
+Verify that the Task Runner service is healthy.
+Check whether there are any known issues affecting version 2.20.11.
+Confirm whether the update includes fixes related to Task Runners or Code node execution.
+
+
+Based on the troubleshooting performed, I believe the issue is related to the Task Runner service rather than the workflow itself.
+
+I would appreciate if you could verify the following:
+
+Check whether the JavaScript Task Runner is running correctly and accepting new tasks.
+Restart the Task Runner service assigned to my instance.
+Verify whether my instance is experiencing Task Runner capacity issues.
+Check for any known bugs affecting n8n Cloud 2.20.11 related to Task Runners.
+If available, upgrade my instance to the latest stable version of n8n.
+Verify whether the timeout is being reached before the Task Runner actually starts processing the request.
+If necessary, increase the N8N_RUNNERS_TASK_REQUEST_TIMEOUT value for my instance.
+Review the Task Runner logs for my instance to identify why requests expire after exactly 20 seconds.
+
+The workflow itself has already been validated:
+
+The error occurs even with a Code node containing only:
+return items;
+The previous nodes execute successfully.
+The timeout happens before the JavaScript code begins execution.
+
+For these reasons, I believe this is an infrastructure or Task Runner availability issue rather than a workflow implementation problem.
+
+<img width=""295"" height=""372"" alt=""Image"" src=""https://github.com/user-attachments/assets/b968f675-67e3-4a37-b842-11c0af83da79"" />",2016,NONE,User,2026-07-20T10:01:26Z,2026-07-20T10:01:26Z,https://github.com/n8n-io/n8n/issues/34545#issuecomment-5021006633
+n8n-io/n8n,34545,5023557955,3,@lucianodsantana Please email the support team using help@n8n.io and they will be able to look into the instance for you. It is likely an issue with the instance and not something we can fix here.,196,MEMBER,User,2026-07-20T14:45:48Z,2026-07-20T14:45:48Z,https://github.com/n8n-io/n8n/issues/34545#issuecomment-5023557955
+n8n-io/n8n,34815,5061792460,1,"Hey @mariano-veron-osanasalud,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9063"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9063](https://linear.app/n8n/issue/GHC-9063)",509,CONTRIBUTOR,Bot,2026-07-23T18:11:27Z,2026-07-23T18:11:27Z,https://github.com/n8n-io/n8n/issues/34815#issuecomment-5061792460
+n8n-io/n8n,34815,5062898097,2,@mariano-veron-osanasalud Looking at your video you have manually executed the node but the trigger node is a Slack trigger so that node will be waiting for an event before starting. Can you try using a manual trigger node for now or send an event in Slack to make sure the trigger starts.,289,MEMBER,User,2026-07-23T20:11:07Z,2026-07-23T20:11:07Z,https://github.com/n8n-io/n8n/issues/34815#issuecomment-5062898097
+n8n-io/n8n,34815,5063071728,3,"@mariano-veron-osanasalud I have just tested this and it does appear to be what I thought based on your video.
+
+I am going to close this for now as it doesn't look to be a bug. If you see the same issue after the trigger has executed let me know and we can open this again. ",274,MEMBER,User,2026-07-23T20:27:39Z,2026-07-23T20:27:39Z,https://github.com/n8n-io/n8n/issues/34815#issuecomment-5063071728
+n8n-io/n8n,34837,5065592605,1,"Hey @mauimparato,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9068"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9068](https://linear.app/n8n/issue/GHC-9068)",496,CONTRIBUTOR,Bot,2026-07-24T02:35:48Z,2026-07-24T02:35:48Z,https://github.com/n8n-io/n8n/issues/34837#issuecomment-5065592605
+n8n-io/n8n,34837,5065913497,2,@mauimparato please email help@n8n.io and the support team will be able to look at your instance to see what is happening. ,123,MEMBER,User,2026-07-24T03:41:45Z,2026-07-24T03:41:45Z,https://github.com/n8n-io/n8n/issues/34837#issuecomment-5065913497
+n8n-io/n8n,34837,5065939463,3,"Just to quickly add, I have let the support team know you will be in touch. Sadly this isn't something we will be able to fix from here as it is likely to be something with the cloud instance rather than a general bug that we can fix here.",239,MEMBER,User,2026-07-24T03:47:17Z,2026-07-24T03:47:17Z,https://github.com/n8n-io/n8n/issues/34837#issuecomment-5065939463
+n8n-io/n8n,34818,5063058792,1,"Hey @Vission01,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9065"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9065](https://linear.app/n8n/issue/GHC-9065)",494,CONTRIBUTOR,Bot,2026-07-23T20:26:21Z,2026-07-23T20:26:21Z,https://github.com/n8n-io/n8n/issues/34818#issuecomment-5063058792
+n8n-io/n8n,34818,5067987554,2,Hi! I'd like to work on this issue. I have experience with AI/ML projects and this aligns well with my skills. I'll submit a PR soon! 🚀,135,NONE,User,2026-07-24T08:50:58Z,2026-07-24T08:50:58Z,https://github.com/n8n-io/n8n/issues/34818#issuecomment-5067987554
+n8n-io/n8n,34818,5069153096,3,@eslam-ahmed43 It looks like we already have a fix in place for this issue.,75,MEMBER,User,2026-07-24T11:04:10Z,2026-07-24T11:04:10Z,https://github.com/n8n-io/n8n/issues/34818#issuecomment-5069153096
+n8n-io/n8n,34840,5065690038,1,"Hey @vinicius482,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9069"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9069](https://linear.app/n8n/issue/GHC-9069)",496,CONTRIBUTOR,Bot,2026-07-24T02:55:46Z,2026-07-24T02:55:46Z,https://github.com/n8n-io/n8n/issues/34840#issuecomment-5065690038
+n8n-io/n8n,34840,5065915858,2,@vinicius482 please email help@n8n.io and the support team will be able to look at your instance to see what is happening. ,123,MEMBER,User,2026-07-24T03:42:18Z,2026-07-24T03:42:18Z,https://github.com/n8n-io/n8n/issues/34840#issuecomment-5065915858
+n8n-io/n8n,34840,5065940515,3,"Just to quickly add, I have let the support team know you will be in touch. Sadly this isn't something we will be able to fix from here as it is likely to be something with the cloud instance rather than a general bug that we can fix here.",239,MEMBER,User,2026-07-24T03:47:30Z,2026-07-24T03:47:30Z,https://github.com/n8n-io/n8n/issues/34840#issuecomment-5065940515
+n8n-io/n8n,34843,5066680572,1,"Hey @drake7707,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9070"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9070](https://linear.app/n8n/issue/GHC-9070)",494,CONTRIBUTOR,Bot,2026-07-24T06:06:25Z,2026-07-24T06:06:25Z,https://github.com/n8n-io/n8n/issues/34843#issuecomment-5066680572
+n8n-io/n8n,34843,5068726849,2,"Hi @drake7707 
+This has been fixed in the latest version 2.32.x",63,CONTRIBUTOR,User,2026-07-24T10:20:38Z,2026-07-24T10:20:38Z,https://github.com/n8n-io/n8n/issues/34843#issuecomment-5068726849
+n8n-io/n8n,34823,5063993852,1,"Hey @chriseberman1976-jpg,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9066"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9066](https://linear.app/n8n/issue/GHC-9066)",505,CONTRIBUTOR,Bot,2026-07-23T22:04:43Z,2026-07-23T22:04:43Z,https://github.com/n8n-io/n8n/issues/34823#issuecomment-5063993852
+n8n-io/n8n,34823,5068841195,2,"@chriseberman1976-jpg Thanks for reporting this.
+
+This one is a known issue with the Airtable base and table dropdowns. It was fixed in #29671, which shipped in `2.20.0`. 
+The `1.123.x` line your instance is on does not include the fix, so the dropdowns keep failing with `No bridge acquired for this context`.
+
+Could you upgrade to `2.20.0` or later and confirm the dropdowns load again? I will close this for now, but comment here if you are still hitting it after the upgrade and I will reopen.
+
+
+",500,CONTRIBUTOR,User,2026-07-24T10:32:34Z,2026-07-24T10:32:34Z,https://github.com/n8n-io/n8n/issues/34823#issuecomment-5068841195
+n8n-io/n8n,34812,5061344189,1,"Thank you for taking the time to submit this issue! Unfortunately, it looks like the issue template hasn’t been fully completed. The template is crucial because it helps us understand the problem better and resolve it more efficiently.
+
+We’ll go ahead and close this issue for now. If you’d still like assistance, please feel free to reopen the issue after filling out the required information in the template. Alternatively, you can create a new issue using the template to provide the missing details.
+
+We appreciate your understanding and look forward to assisting you further once we have all the necessary information!",623,CONTRIBUTOR,Bot,2026-07-23T17:21:59Z,2026-07-23T17:21:59Z,https://github.com/n8n-io/n8n/issues/34812#issuecomment-5061344189
+n8n-io/n8n,34812,5061375217,2,"i edited the template can you please reopen this issue 
+thanks",62,NONE,User,2026-07-23T17:25:09Z,2026-07-23T17:25:09Z,https://github.com/n8n-io/n8n/issues/34812#issuecomment-5061375217
+n8n-io/n8n,34961,5080135893,1,"Hey @jeremyhboss,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9095"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9095](https://linear.app/n8n/issue/GHC-9095)",496,CONTRIBUTOR,Bot,2026-07-25T18:57:36Z,2026-07-25T18:57:36Z,https://github.com/n8n-io/n8n/issues/34961#issuecomment-5080135893
+n8n-io/n8n,34961,5080655407,2,"Hi @jeremyhboss, thanks for the thorough report. We've traced what this error can and cannot mean on the server side, and that narrows things down a lot.
+
+code_verifier does not match the challenge is only returned when the authorization code itself is valid: it exists, is unexpired, unused, and belongs to your client_id. The only way to hit it is when the code was created from a different authorization attempt than the one your mcp-remote process is waiting on. In other words, two OAuth authorization flows ran against the same server around the same time and overwrote each other's state (n8n keeps the pending authorization in a single browser cookie, and mcp-remote keeps a single code_verifier.txt per server URL, so a second flow silently replaces both). Claude Desktop on Windows is known to spawn each configured MCP server twice at startup (anthropics/claude-code#53134), which produces exactly this pattern, and mcp-remote's lockfile coordination avoids the EADDRINUSE you checked for, so a second instance can be present without a port conflict.
+
+To confirm, could you check the following:
+
+1. Count the processes. While Claude Desktop is running, check Task Manager for multiple node/npx processes running mcp-remote for this server (or run wmic process where ""commandline like '%mcp-remote%'"" get processid,commandline in a terminal).
+2. Check the MCP log for duplicate auth flows. In Claude Desktop's logs/mcp-server-<name>.log, look for the phrase Please authorize this client by visiting appearing more than once per connection attempt, and note whether your browser opened (or you clicked) more than one consent tab.
+3. Run mcp-remote debug mode. Add --debug to the mcp-remote args and retry; it writes ~/.mcp-auth/<hash>_debug.log, which records every code_verifier save/read and will show if a second flow overwrote the first one's verifier.
+4. Test outside Claude Desktop. With Claude Desktop fully closed, clear .mcp-auth, then run a single instance manually in one terminal: npx -y mcp-remote@latest https://<host>/mcp-server/http 8090, and approve the consent. If this succeeds, the server-side flow (including your proxy setup) is fine and the problem is the duplicated client processes.
+5. Be logged into n8n before you start. If the consent screen takes a while (for example a login redirect first), a second mcp-remote instance can time out waiting and start its own competing flow. Being pre-authenticated and approving promptly avoids that window.",2481,CONTRIBUTOR,User,2026-07-25T21:29:25Z,2026-07-25T21:29:25Z,https://github.com/n8n-io/n8n/issues/34961#issuecomment-5080655407
+n8n-io/n8n,34781,5058676568,1,"Thank you for taking the time to submit this issue! Unfortunately, it looks like the issue template hasn’t been fully completed. The template is crucial because it helps us understand the problem better and resolve it more efficiently.
+
+We’ll go ahead and close this issue for now. If you’d still like assistance, please feel free to reopen the issue after filling out the required information in the template. Alternatively, you can create a new issue using the template to provide the missing details.
+
+We appreciate your understanding and look forward to assisting you further once we have all the necessary information!",623,CONTRIBUTOR,Bot,2026-07-23T13:00:59Z,2026-07-23T13:00:59Z,https://github.com/n8n-io/n8n/issues/34781#issuecomment-5058676568
+n8n-io/n8n,34781,5058744749,2,"@priyadesai696 please follow the documentation that will get you most of the way there. 
+
+Depending on your experience with managing servers it may be easier to go with n8n cloud. ",180,MEMBER,User,2026-07-23T13:07:40Z,2026-07-23T13:07:40Z,https://github.com/n8n-io/n8n/issues/34781#issuecomment-5058744749
+n8n-io/n8n,34640,5034011480,1,"Hey @Anchel123,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9038"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9038](https://linear.app/n8n/issue/GHC-9038)",494,CONTRIBUTOR,Bot,2026-07-21T12:30:42Z,2026-07-21T12:30:42Z,https://github.com/n8n-io/n8n/issues/34640#issuecomment-5034011480
+n8n-io/n8n,34640,5049676589,2,"It doesn’t, because you are importing a workflow that references a credential which does not exist in the instance (ID does not exist). When you open the node, we automatically select a credential of the same type, assuming one is available. This is intentional behavior and more of a feature than a bug.",304,CONTRIBUTOR,User,2026-07-22T18:04:47Z,2026-07-22T18:08:10Z,https://github.com/n8n-io/n8n/issues/34640#issuecomment-5049676589
+n8n-io/n8n,34594,5027823678,1,"Hey @PareiProgramei,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9032"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9032](https://linear.app/n8n/issue/GHC-9032)",499,CONTRIBUTOR,Bot,2026-07-20T22:18:34Z,2026-07-20T22:18:34Z,https://github.com/n8n-io/n8n/issues/34594#issuecomment-5027823678
+n8n-io/n8n,34594,5045624422,2,"@PareiProgramei this error is the by-design runner timeout. `TaskRequestTimeoutError` fires when no task runner accepts a Code node task within `N8N_RUNNERS_TASK_REQUEST_TIMEOUT` (~20s). The instance-wide, timestamped onset across unrelated workflows points to the task runner process being down, unreachable from the main instance, or at capacity on your deployment. It is not a Code node complexity issue.
+
+Your instance runs on `cloudfy.live`, which is a third-party host, not n8n Cloud. We have no access to the runner health or capacity there, so this is best raised with Cloudfy support. On your side, worth checking whether the runner container is up and healthy, and whether it can reach the main instance (auth token and network).",739,CONTRIBUTOR,User,2026-07-22T12:13:01Z,2026-07-22T12:13:01Z,https://github.com/n8n-io/n8n/issues/34594#issuecomment-5045624422
+n8n-io/n8n,34648,5035022415,1,"Hey @OperacionesTrego,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9042"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9042](https://linear.app/n8n/issue/GHC-9042)",501,CONTRIBUTOR,Bot,2026-07-21T14:05:19Z,2026-07-21T14:05:19Z,https://github.com/n8n-io/n8n/issues/34648#issuecomment-5035022415
+n8n-io/n8n,34648,5035232671,2,@OperacionesTrego Please email help@n8n.io and the support team will be able to look into your instance.,104,MEMBER,User,2026-07-21T14:25:16Z,2026-07-21T14:25:16Z,https://github.com/n8n-io/n8n/issues/34648#issuecomment-5035232671
+n8n-io/n8n,34628,5033313929,1,"Hey @nihaals,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9035"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9035](https://linear.app/n8n/issue/GHC-9035)",492,CONTRIBUTOR,Bot,2026-07-21T11:20:47Z,2026-07-21T11:20:47Z,https://github.com/n8n-io/n8n/issues/34628#issuecomment-5033313929
+n8n-io/n8n,34628,5033322507,2,"After breaking down both options, I think calling `recurrenceCheck()` on activation matches what the user expects. Right now the approach used for (some) intervals is running the next interval (e.g. every hour for every n hours).",229,CONTRIBUTOR,User,2026-07-21T11:21:55Z,2026-07-21T11:21:55Z,https://github.com/n8n-io/n8n/issues/34628#issuecomment-5033322507
