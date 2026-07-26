@@ -18,8 +18,8 @@ The current version was developed and tested using public GitHub discussions fro
 
 ## Live Project
 
-- **Dashboard:** [Explore NeedSignal](PASTE_YOUR_STREAMLIT_LINK_HERE)
-- **Portfolio:** [View the project](PASTE_YOUR_PORTFOLIO_LINK_HERE)
+- **Dashboard:** [Explore NeedSignal](https://needsignal-l4vb9nowqozgkzj86gezle.streamlit.app/#need-signal)
+
 
 ---
 
