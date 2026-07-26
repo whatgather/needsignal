@@ -1,0 +1,314 @@
+"""Collect public GitHub issues and comments for NeedSignal."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import time
+from pathlib import Path
+from typing import Any, Iterable
+from urllib.parse import parse_qs, urlparse
+
+import requests
+from dotenv import load_dotenv
+
+API_VERSION = "2022-11-28"
+DEFAULT_TIMEOUT = 30
+
+
+def build_session(token: str | None) -> requests.Session:
+    session = requests.Session()
+    session.headers.update(
+        {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": API_VERSION,
+            "User-Agent": "NeedSignal-Research-Collector",
+        }
+    )
+    if token:
+        session.headers["Authorization"] = f"Bearer {token}"
+    return session
+
+
+def parse_next_link(link_header: str | None) -> str | None:
+    """Return the URL marked rel=next from a GitHub Link header."""
+    if not link_header:
+        return None
+
+    for part in link_header.split(","):
+        section = part.strip().split(";")
+        if len(section) < 2:
+            continue
+        url = section[0].strip().strip("<>")
+        rel = section[1].strip()
+        if rel == 'rel="next"':
+            return url
+    return None
+
+
+def request_json(
+    session: requests.Session,
+    url: str,
+    *,
+    params: dict[str, Any] | None = None,
+    max_retries: int = 4,
+) -> tuple[Any, requests.Response]:
+    """GET JSON with basic retry and rate-limit handling."""
+    for attempt in range(max_retries):
+        response = session.get(url, params=params, timeout=DEFAULT_TIMEOUT)
+
+        if response.status_code == 200:
+            return response.json(), response
+
+        if response.status_code in {403, 429}:
+            reset = response.headers.get("X-RateLimit-Reset")
+            if reset and reset.isdigit():
+                wait_seconds = max(int(reset) - int(time.time()) + 1, 2)
+            else:
+                wait_seconds = min(2 ** attempt * 5, 60)
+
+            if attempt == max_retries - 1:
+                response.raise_for_status()
+
+            print(f"Rate limited. Waiting {wait_seconds} seconds...")
+            time.sleep(wait_seconds)
+            continue
+
+        if 500 <= response.status_code < 600 and attempt < max_retries - 1:
+            time.sleep(min(2 ** attempt * 2, 20))
+            continue
+
+        response.raise_for_status()
+
+    raise RuntimeError(f"Could not retrieve {url}")
+
+
+def iter_issue_pages(
+    session: requests.Session,
+    repo: str,
+    *,
+    max_issues: int,
+) -> Iterable[dict[str, Any]]:
+    url = f"https://api.github.com/repos/{repo}/issues"
+    params: dict[str, Any] | None = {
+        "state": "all",
+        "sort": "updated",
+        "direction": "desc",
+        "per_page": 100,
+    }
+    yielded = 0
+
+    while url and yielded < max_issues:
+        payload, response = request_json(session, url, params=params)
+        params = None
+
+        for item in payload:
+            # GitHub returns pull requests through the issues endpoint too.
+            if "pull_request" in item:
+                continue
+
+            yield item
+            yielded += 1
+            if yielded >= max_issues:
+                return
+
+        url = parse_next_link(response.headers.get("Link"))
+
+
+def collect_comments(
+    session: requests.Session,
+    comments_url: str,
+    *,
+    max_comments: int,
+) -> list[dict[str, Any]]:
+    comments: list[dict[str, Any]] = []
+    url: str | None = comments_url
+    params: dict[str, Any] | None = {"per_page": 100}
+
+    while url and len(comments) < max_comments:
+        payload, response = request_json(session, url, params=params)
+        params = None
+
+        for item in payload:
+            comments.append(
+                {
+                    "comment_id": item.get("id"),
+                    "author": (item.get("user") or {}).get("login"),
+                    "author_association": item.get("author_association"),
+                    "created_at": item.get("created_at"),
+                    "updated_at": item.get("updated_at"),
+                    "body": item.get("body") or "",
+                    "html_url": item.get("html_url"),
+                }
+            )
+            if len(comments) >= max_comments:
+                break
+
+        url = parse_next_link(response.headers.get("Link"))
+
+    return comments
+
+
+def normalise_issue(
+    repo: str,
+    issue: dict[str, Any],
+    comments: list[dict[str, Any]],
+) -> dict[str, Any]:
+    labels = [
+        label.get("name", "")
+        for label in issue.get("labels", [])
+        if isinstance(label, dict)
+    ]
+    comments_text = "\n\n".join(
+        comment["body"].strip()
+        for comment in comments
+        if comment.get("body", "").strip()
+    )
+
+    return {
+        "repo": repo,
+        "issue_number": issue.get("number"),
+        "state": issue.get("state"),
+        "title": issue.get("title") or "",
+        "body": issue.get("body") or "",
+        "comments_text": comments_text,
+        "labels": labels,
+        "author": (issue.get("user") or {}).get("login"),
+        "author_association": issue.get("author_association"),
+        "created_at": issue.get("created_at"),
+        "updated_at": issue.get("updated_at"),
+        "closed_at": issue.get("closed_at"),
+        "comment_count": issue.get("comments", 0),
+        "reaction_count": (issue.get("reactions") or {}).get("total_count", 0),
+        "html_url": issue.get("html_url"),
+        "comments": comments,
+    }
+
+
+def write_jsonl(records: list[dict[str, Any]], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def write_csv(records: list[dict[str, Any]], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "repo",
+        "issue_number",
+        "state",
+        "title",
+        "body",
+        "comments_text",
+        "labels",
+        "author",
+        "author_association",
+        "created_at",
+        "updated_at",
+        "closed_at",
+        "comment_count",
+        "reaction_count",
+        "html_url",
+    ]
+
+    with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for record in records:
+            row = {key: record.get(key) for key in fieldnames}
+            row["labels"] = json.dumps(row["labels"], ensure_ascii=False)
+            writer.writerow(row)
+
+
+def load_repositories(config_path: Path) -> list[str]:
+    with config_path.open("r", encoding="utf-8") as handle:
+        config = json.load(handle)
+
+    repos = config.get("repositories")
+    if not isinstance(repos, list) or not repos:
+        raise ValueError("Config must contain a non-empty 'repositories' list.")
+
+    return [str(repo).strip() for repo in repos if str(repo).strip()]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("config/repos.json"),
+        help="JSON file containing a repositories list.",
+    )
+    parser.add_argument(
+        "--max-issues-per-repo",
+        type=int,
+        default=175,
+        help="Maximum non-PR issues collected from each repository.",
+    )
+    parser.add_argument(
+        "--include-comments",
+        action="store_true",
+        help="Collect issue comments as well as issue bodies.",
+    )
+    parser.add_argument(
+        "--max-comments-per-issue",
+        type=int,
+        default=40,
+        help="Maximum comments collected per issue.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("data/raw"),
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    load_dotenv()
+
+    token = os.getenv("GITHUB_TOKEN") or None
+    session = build_session(token)
+    repositories = load_repositories(args.config)
+
+    records: list[dict[str, Any]] = []
+
+    for repo in repositories:
+        print(f"Collecting issues from {repo}...")
+        count_before = len(records)
+
+        for issue in iter_issue_pages(
+            session,
+            repo,
+            max_issues=args.max_issues_per_repo,
+        ):
+            comments: list[dict[str, Any]] = []
+            if args.include_comments and issue.get("comments", 0) > 0:
+                comments = collect_comments(
+                    session,
+                    issue["comments_url"],
+                    max_comments=args.max_comments_per_issue,
+                )
+
+            records.append(normalise_issue(repo, issue, comments))
+
+        print(f"Collected {len(records) - count_before} issues from {repo}.")
+
+    jsonl_path = args.output_dir / "issues.jsonl"
+    csv_path = args.output_dir / "issues.csv"
+
+    write_jsonl(records, jsonl_path)
+    write_csv(records, csv_path)
+
+    print(f"\nSaved {len(records)} records.")
+    print(f"JSONL: {jsonl_path}")
+    print(f"CSV:   {csv_path}")
+
+
+if __name__ == "__main__":
+    main()
