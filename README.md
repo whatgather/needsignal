@@ -470,94 +470,6 @@ The structure may change as the project expands.
 
 ---
 
-## Running the Project Locally
-
-### 1. Clone the repository
-
-```bash
-git clone YOUR_REPOSITORY_URL
-cd needsignal
-```
-
-### 2. Create a virtual environment
-
-macOS or Linux:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-Windows:
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-### 3. Install dependencies
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### 4. Run tests
-
-```bash
-pytest -q
-```
-
-### 5. Launch the dashboard
-
-```bash
-python -m streamlit run needsignal/streamlit_app_v2.py
-```
-
----
-
-## Rebuilding the Pilot Dataset
-
-### Collect issues
-
-```bash
-python -m needsignal.collect \
-  --owner n8n-io \
-  --repo n8n \
-  --limit 100
-```
-
-### Collect issue comments
-
-```bash
-python -m needsignal.comments \
-  --issues data/raw/n8n-io_n8n_issues.csv \
-  --owner n8n-io \
-  --repo n8n \
-  --max-issues 25
-```
-
-### Prepare discussions for annotation
-
-```bash
-python -m needsignal.prepare_annotation \
-  --issues data/raw/n8n-io_n8n_issues.csv \
-  --comments data/raw/n8n-io_n8n_comments.csv \
-  --sample-size 60
-```
-
-### Analyse model errors
-
-```bash
-python -m needsignal.analyze_errors
-```
-
-### Build confirmed opportunity signals
-
-```bash
-python -m needsignal.build_opportunities
-```
-
----
 
 ## Research Principles
 
@@ -651,7 +563,7 @@ The current n8n analysis is the first pilot study of that larger idea.
 
 ## Data and Ethics
 
-NeedSignal uses publicly available product discussions for research and portfolio demonstration.
+NeedSignal uses publicly available product discussions for research demonstration.
 
 The project does not attempt to:
 
@@ -668,7 +580,7 @@ The analysis focuses on product-level behaviour, unmet needs, and process fricti
 
 ## Author
 
-**WHATGATHER**
+**Bas Abariga**
 
 Behavioural research, Python, analytics, and decision-support systems.
 
