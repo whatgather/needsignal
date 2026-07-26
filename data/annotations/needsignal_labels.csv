@@ -1,0 +1,61 @@
+annotation_id,primary_label,has_workaround,user_goal,obstacle,workaround,human_cost,underlying_need,evidence_quote,confidence,annotator_notes
+NS-0001,workaround,yes,Restrict execution results to the requested project for member API keys.,The projectId filter is ignored for member API keys and returns executions from all accessible projects.,Patch the workflow-sharing query locally to add the missing projectId condition.,Requires maintaining a local code modification and leaves incorrect data exposure until patched.,Consistent project-level filtering for every API-key role.,Adding the missing condition fixes it (verified locally).,high,Bug report with a verified local code patch; workaround takes priority.
+NS-0002,bug_report,no,,,,,,,high,Repeated infrastructure failure; no compensating user behaviour described.
+NS-0003,workaround,yes,Create and maintain a Facebook Lead Ads to SuiteCRM workflow.,The n8n AI Builder is unavailable.,Create and update the workflow manually.,"More setup time, cognitive effort, and manual configuration.",Reliable AI-assisted workflow creation and editing.,"I am unable to use the n8n AI Builder, so I am creating and updating the workflow manually.",high,
+NS-0004,bug_report,no,,,,,,,high,Specific AI Assistant malfunction; no workaround described.
+NS-0005,user_confusion,no,,,,,,,high,The node was waiting for the Slack trigger; maintainer determined it was expected trigger behaviour.
+NS-0006,bug_report,no,,,,,,,medium,Sparse duplicate report of a hanging node; insufficient evidence to reclassify as confusion.
+NS-0007,bug_report,no,,,,,,,high,The interface permits an invalid configuration that the Notion API rejects.
+NS-0008,bug_report,no,,,,,,,high,Specific account-access failure; recreating an account did not recover the original account.
+NS-0009,bug_report,no,,,,,,,high,Reproducible UI clipping defect; no workaround stated.
+NS-0010,not_actionable,no,,,,,,,high,Too vague to diagnose or extract a behavioural signal.
+NS-0011,bug_report,no,,,,,,,high,Specific schema mismatch between connected nodes.
+NS-0012,bug_report,no,,,,,,,high,Configured timeout is ignored by the node.
+NS-0013,bug_report,no,,,,,,,high,Multiple failed troubleshooting attempts are not a functioning workaround.
+NS-0014,workaround,yes,Generate or modify a workflow with AI Builder.,AI Builder does not complete the request.,Build the workflow manually.,Additional time and repetitive manual configuration.,A reliable AI Builder with actionable failure messages.,"Because of this, I have to build the workflow manually.",high,
+NS-0015,bug_report,no,,,,,,,high,"curl was used as a diagnostic control, not as an adopted operating workaround."
+NS-0016,workaround,yes,Authenticate to GoHighLevel and update contacts from n8n Cloud.,The native HighLevel OAuth2 credential never persists the exchanged token.,Use GoHighLevel Private Integration Tokens through HTTP Request nodes.,Loses native-node resource locators and requires more manual request configuration.,Reliable native HighLevel OAuth token exchange and persistence.,Proceeding with GoHighLevel Private Integration Tokens via HTTP Request nodes as an interim workaround.,high,
+NS-0017,workaround,yes,Use an imported workflow with its assigned credentials.,Imported nodes show false missing-credential warnings.,Open and close each affected node so n8n reselects a credential of the same type.,Repetitive manual work and uncertainty about whether credentials are actually valid.,Correct credential-state reconciliation immediately after workflow import.,"If the user opens an affected node in the node dialog (NDV) and closes it without changing anything, the warning disappears.",high,
+NS-0018,bug_report,no,,,,,,,high,Zoho duplicate-record errors are hidden behind a generic n8n error.
+NS-0019,bug_report,no,,,,,,,high,Configured API v2 node still uses deprecated API v1.
+NS-0020,bug_report,no,,,,,,,high,Consistent task-runner infrastructure failure; no workaround adopted.
+NS-0021,bug_report,no,,,,,,,medium,"Clear production-webhook malfunction, though the report is brief."
+NS-0022,bug_report,no,,,,,,,high,New production webhooks fail despite valid database and activation state.
+NS-0023,feature_request,no,,,,,,,high,"Requests Application Default Credentials support; key rotation is only an alternative considered, not clearly adopted."
+NS-0024,feature_request,no,,,,,,,high,Proposal to add a research/evaluation tool to related documentation.
+NS-0025,workaround,yes,Run LDAP searches in production.,The built-in LDAP node times out and cannot load options.,Install and use the community n8n-nodes-ldap package until upgrading fixes the built-in node.,Dependency on a separate community package and additional maintenance.,Reliable built-in LDAP support across Windows Server environments.,But in prod environment only n8n-nodes-ldap@0.1.10 works on Windows Server 2022 Standard.,high,
+NS-0026,bug_report,no,,,,,,,medium,Recurring workspace outages with a specific symptom but limited diagnostic evidence.
+NS-0027,bug_report,no,,,,,,,high,"Paid quota remains stale; manual execution is a diagnostic comparison, not a substitute for production triggers."
+NS-0028,bug_report,no,,,,,,,high,Pagination expressions can silently send a masked credential placeholder.
+NS-0029,user_confusion,no,,,,,,,high,Asks how to install server packages and whether the current plan supports them.
+NS-0030,bug_report,no,,,,,,,high,Regression in shared AWS signing path; report explicitly states there is no node-level workaround.
+NS-0031,bug_report,no,,,,,,,high,Suggested alternatives were attempted and failed; no successful workaround exists.
+NS-0032,bug_report,no,,,,,,,high,Connected MCP tools are not invoked despite successful trigger execution.
+NS-0033,workaround,yes,Complete MCP OAuth consent on an HTTP-hosted n8n instance.,The OAuth session cookie is always marked Secure and is dropped on plain HTTP.,Place n8n behind an HTTPS reverse proxy.,Requires extra infrastructure and configuration that should be unnecessary when secure cookies are disabled.,OAuth cookies that respect N8N_SECURE_COOKIE=false.,Confirmed workaround: putting n8n behind an HTTPS reverse proxy (e.g. Caddy) resolves the issue immediately.,high,
+NS-0034,workaround,yes,Update an active workflow through the MCP update tool.,MCP updates on active SQLite workflows fail with a missing-column error.,"Deactivate the workflow before the MCP update, or edit and save it manually in the UI.",Introduces downtime or manual context switching and prevents end-to-end automation.,Reliable MCP updates for active workflows.,Deactivate the same workflow and repeat the identical call → succeeds.,high,
+NS-0035,workaround,yes,Restore the editor after expanding the collapsed sidebar breaks the layout.,The expanded sidebar is blank and pushes the main content off screen.,Reload the page.,Interrupts work and must be repeated whenever the defect occurs.,A sidebar toggle that reflows the editor without corrupting the layout.,"Clicking the toggle again does not restore the layout, only a full page reload does.",high,
+NS-0036,bug_report,no,,,,,,,high,Unpublish/republish was attempted but did not restore webhook registration.
+NS-0037,general_complaint,no,,,,,,,high,Broad dissatisfaction and credit-reimbursement request without one clearly isolatable product defect.
+NS-0038,bug_report,no,,,,,,,medium,"Specific null-data symptom, but the report is sparse."
+NS-0039,bug_report,no,,,,,,,medium,"Allowlisting succeeds while module resolution fails; reporter asks whether this is intended, but behaviour conflicts with the configured capability."
+NS-0040,bug_report,no,,,,,,,high,Version regression confirmed and later fixed by upgrading to the release containing the patch; an upgrade to a fixed build is not treated as a workaround.
+NS-0041,bug_report,no,,,,,,,high,Systemic execute-step failure across unrelated node types.
+NS-0042,bug_report,no,,,,,,,high,"The attempted source patch had no effect, so it is not a successful workaround."
+NS-0043,user_confusion,no,,,,,,,medium,Maintainer explains the PKCE mismatch is consistent with duplicate client authorization flows; reporter confirmation is not present.
+NS-0044,workaround,yes,Disable a workflow's availableInMCP setting through MCP automation.,The MCP update tool does not recognise availableInMCP.,Toggle Available in MCP manually in the workflow Settings UI.,Breaks automation and requires manual editor access.,MCP tooling that can read and update availableInMCP.,"The only working method is manually toggling ""Available in MCP"" in the workflow's Settings menu.",high,
+NS-0045,bug_report,no,,,,,,,high,Account-wide production-webhook registration failure.
+NS-0046,workaround,yes,Use an impersonated Google service account for non-Sheets APIs.,The credential test incorrectly validates hardcoded Sheets scopes and reports failure.,Save the credential despite the failed test and use it through the HTTP Request node.,"Misleading validation, unnecessary debugging, and reduced confidence in credential status.",Credential tests that validate the scopes actually configured by the user.,Save anyway and use it from an HTTP Request node against GET https://www.googleapis.com/calendar/v3/calendars/{id}/events → works correctly.,high,
+NS-0047,workaround,yes,Keep scheduled Salesforce workflows authenticated.,"Token refresh drops instance_url, causing every Salesforce request to fail.",Manually reconnect the Salesforce OAuth credential whenever it breaks.,"Recurring manual intervention, workflow downtime, and repeated failures.",Preserve Salesforce instance_url across OAuth refreshes.,Manually reconnecting the credential (full OAuth authorize flow) fixes it immediately.,high,
+NS-0048,workaround,yes,Keep workflow-statistics rollups completing without crashing the container.,PostgreSQL can return firstEvent as a string while the code assumes a Date.,Build and run a custom n8n image with firstEvent normalised through new Date().,Engineering effort and ongoing maintenance of a custom image.,Native timestamp normalisation and a regression test in n8n.,We applied this change to a custom image based on n8n 2.31.4 and verified it.,high,
+NS-0049,user_confusion,no,,,,,,,high,Reporter later found the node was configured incorrectly after rereading the API documentation.
+NS-0050,bug_report,no,,,,,,,high,"Detailed investigation isolates an MCP GET listen-stream hang; manual curl tests are diagnostic, not a replacement for the Claude connector."
+NS-0051,bug_report,no,,,,,,,medium,"Strong operational evidence, but the leaked-interval root cause and reproduction remain explicitly unconfirmed."
+NS-0052,bug_report,no,,,,,,,high,Duplicate report of MCP tools not executing.
+NS-0053,bug_report,no,,,,,,,high,59-minute schedule fires twice within an hour and consumes executions.
+NS-0054,workaround,yes,Download S3 objects whose keys contain equals signs or colons.,"n8n signs an unencoded path but sends a percent-encoded path, producing SignatureDoesNotMatch.",Percent-encode each key segment and use an HTTP Request node with an AWS credential and a path-style S3 URL.,Fragile custom URL construction that will break through double encoding after the signer is fixed.,AWS signing over the same canonical path that n8n transmits.,Percent-encode the key per path segment and fetch via HTTP Request + AWS credential over a path-style URL.,high,
+NS-0055,bug_report,no,,,,,,,high,Notion formula filtering still fails after being marked fixed.
+NS-0056,not_actionable,no,,,,,,,high,Empty issue with no usable problem description.
+NS-0057,workaround,yes,Continue using touch gestures on the workflow canvas after typing.,Any keyboard input disables canvas pinch-to-zoom and drag gestures.,Refresh the browser to restore touch functionality.,Repeated interruption and loss of canvas context after every keyboard interaction.,Keyboard shortcuts that do not disable touchscreen canvas controls.,"To restore functionality, I must refresh the browser.",high,
+NS-0058,bug_report,no,,,,,,,high,Production form-resume URL uses the wrong endpoint path; manual/test mode is not a viable production workaround.
+NS-0059,bug_report,no,,,,,,,high,Credential-category audit consistently crashes the instance.
+NS-0060,bug_report,no,,,,,,,high,XLSX date cells are returned as serial numbers despite RAW Data being disabled.

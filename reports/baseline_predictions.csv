@@ -1,0 +1,61 @@
+annotation_id,repository,issue_number,title,primary_label,actual_label,heuristic_score,matched_patterns,heuristic_prediction,model_prediction,workaround_probability,heuristic_correct,model_correct
+NS-0001,n8n-io/n8n,34527,Public API GET /executions ignores projectId filter for member API keys,workaround,workaround,1,alternative_method,workaround,workaround,0.521,True,True
+NS-0002,n8n-io/n8n,34594,Instance-wide Code node runner failures — multiple unrelated workflows affected,bug_report,no_workaround,1,repetition,workaround,no_workaround,0.4563,False,True
+NS-0003,n8n-io/n8n,34812,Unable to use AI builder on n8n,workaround,workaround,1,manual_process,workaround,no_workaround,0.4265,True,False
+NS-0004,n8n-io/n8n,34614,Error message whatever I do in the AI Assistant,bug_report,no_workaround,0,,no_workaround,no_workaround,0.3113,True,True
+NS-0005,n8n-io/n8n,34815,Google Sheets node (Get Row(s) / Append Row) hangs with no error,user_confusion,no_workaround,1,manual_process,workaround,no_workaround,0.4237,False,True
+NS-0006,n8n-io/n8n,34814,Google Sheets node (Get Row(s) / Append Row) hangs with no error,bug_report,no_workaround,0,,no_workaround,no_workaround,0.4352,True,True
+NS-0007,n8n-io/n8n,34708,"Bug: Formula filter ""Return Type"" allows inconsistent selections",bug_report,no_workaround,3,manual_process | forced_action | alternative_method,workaround,no_workaround,0.4685,False,True
+NS-0008,n8n-io/n8n,34535,Account lost,bug_report,no_workaround,0,,no_workaround,no_workaround,0.3084,True,True
+NS-0009,n8n-io/n8n,34756,Node output panel is visually clipped when opening a node,bug_report,no_workaround,1,alternative_method,workaround,no_workaround,0.4652,False,True
+NS-0010,n8n-io/n8n,34531,help me debug -my workflow project,not_actionable,no_workaround,0,,no_workaround,no_workaround,0.3912,True,True
+NS-0011,n8n-io/n8n,34512,"OpenAI + PGvector - Retrieval fail: Received tool input did not match expected schema ✖ Expected object, received string",bug_report,no_workaround,0,,no_workaround,no_workaround,0.4405,True,True
+NS-0012,n8n-io/n8n,34403,OpenAI node ignores configured AI timeout and aborts after 300000ms Summary,bug_report,no_workaround,0,,no_workaround,no_workaround,0.4489,True,True
+NS-0013,n8n-io/n8n,34837,"Production webhook returns 500 Internal Server Error, even though the workflow is active and the logic runs correctly",bug_report,no_workaround,1,manual_process,workaround,no_workaround,0.3615,False,True
+NS-0014,n8n-io/n8n,34813,AI Builder is unavailable when creating an n8n workflow,workaround,workaround,2,manual_process | forced_action,workaround,no_workaround,0.454,True,False
+NS-0015,n8n-io/n8n,34948,http requests and anthropic requests,bug_report,no_workaround,0,,no_workaround,no_workaround,0.4059,True,True
+NS-0016,n8n-io/n8n,34969,n8n side bug trying to connect to Ghl,workaround,workaround,1,explicit_workaround,workaround,workaround,0.503,True,True
+NS-0017,n8n-io/n8n,34640,Imported workflow shows missing credentials until node dialog is opened,workaround,workaround,1,data_transfer,workaround,no_workaround,0.4,True,False
+NS-0018,n8n-io/n8n,34935,generic/unknown error when a lead already exit with a certain email address,bug_report,no_workaround,1,alternative_method,workaround,no_workaround,0.439,False,True
+NS-0019,n8n-io/n8n,34934,Cal.com nodes & credential still use API V1,bug_report,no_workaround,0,,no_workaround,workaround,0.5226,True,False
+NS-0020,n8n-io/n8n,34545,Task Runner timeout errors when executing Code nodes,bug_report,no_workaround,1,repetition,workaround,no_workaround,0.4264,False,True
+NS-0021,n8n-io/n8n,34838,Webhook Problem,bug_report,no_workaround,0,,no_workaround,no_workaround,0.4057,True,True
+NS-0022,n8n-io/n8n,34936,"New production webhooks return 404 ""not registered"" despite active workflow and valid webhook_entity records",bug_report,no_workaround,1,manual_process,workaround,no_workaround,0.438,False,True
+NS-0023,n8n-io/n8n,34675,Support Application Default Credentials (auto-detect) for GCP Secrets Manager external secrets provider,feature_request,no_workaround,1,forced_action,workaround,workaround,0.5199,False,False
+NS-0024,n8n-io/n8n,34940,Add REFUTE scientific critique + calibration benchmark,feature_request,no_workaround,0,,no_workaround,no_workaround,0.4263,True,True
+NS-0025,n8n-io/n8n,34548,The built-in LDAP module does not work,workaround,workaround,1,manual_process,workaround,no_workaround,0.3925,True,False
+NS-0026,n8n-io/n8n,34915,"Platform goes offline a lot, no reason to be found",bug_report,no_workaround,0,,no_workaround,no_workaround,0.389,True,True
+NS-0027,n8n-io/n8n,34884,"Published workflows fail with ""Execution limit reached"" after successful payment",bug_report,no_workaround,1,manual_process,workaround,no_workaround,0.4358,False,True
+NS-0028,n8n-io/n8n,34951,pagination expression referencing $request sends masked credential placeholder instead of real value,bug_report,no_workaround,2,manual_process | alternative_method,workaround,workaround,0.5136,False,False
+NS-0029,n8n-io/n8n,34781,How can I install this in my server,user_confusion,no_workaround,1,forced_action,workaround,workaround,0.5031,False,False
+NS-0030,n8n-io/n8n,34539,AWS S3 - headers[headerName].trim is not a function,bug_report,no_workaround,1,explicit_workaround,workaround,no_workaround,0.4093,False,True
+NS-0031,n8n-io/n8n,34495,Bug in AWS S3 node (unable to upload file),bug_report,no_workaround,1,alternative_method,workaround,no_workaround,0.385,False,True
+NS-0032,n8n-io/n8n,34530,"MCP Server Trigger execution succeeds, but connected tools are not invoked",bug_report,no_workaround,1,manual_process,workaround,no_workaround,0.374,False,True
+NS-0033,n8n-io/n8n,34955,"OAuth consent fails with ""Invalid or expired authorization session"" - n8n-oauth-session cookie hardcoded with Secure attribute ignoring N8N_SECURE_COOKIE=false",workaround,workaround,2,alternative_method | explicit_workaround,workaround,no_workaround,0.4604,True,False
+NS-0034,n8n-io/n8n,34906,MCP server: update_workflow on an ACTIVE workflow fails with SQLITE_ERROR: no such column: distinctAlias.SharedWorkflow_projectId (2.31.5),workaround,workaround,0,,no_workaround,no_workaround,0.3944,False,False
+NS-0035,n8n-io/n8n,34910,Editor UI: expanding the collapsed left sidebar renders an empty panel and pushes the main content off screen,workaround,workaround,1,alternative_method,workaround,no_workaround,0.4722,True,False
+NS-0036,n8n-io/n8n,34648,"Production webhook returns 404 ""not registered"" despite workflow showing active:true (n8n Cloud)",bug_report,no_workaround,1,repetition,workaround,no_workaround,0.4317,False,True
+NS-0037,n8n-io/n8n,34481,Request for a Goodwill Credit Refund / Partial AI Assistant Credit Reimbursement,general_complaint,no_workaround,0,,no_workaround,no_workaround,0.469,True,True
+NS-0038,n8n-io/n8n,34518,Subworkflow dont get data from start node,bug_report,no_workaround,0,,no_workaround,no_workaround,0.349,True,True
+NS-0039,n8n-io/n8n,34552,JavaScript task runner cannot resolve allowlisted external npm modules in custom runners image,bug_report,no_workaround,2,alternative_method | data_transfer,workaround,no_workaround,0.4689,False,True
+NS-0040,n8n-io/n8n,34645,"Regression: Human Review approval does not execute the wrapped AI Tool in n8n 2.27.5, but works in 2.6.0",bug_report,no_workaround,2,alternative_method | explicit_workaround,workaround,no_workaround,0.4844,False,True
+NS-0041,n8n-io/n8n,34476,Execute step returns no output and no error on all node types — new Cloud instance,bug_report,no_workaround,0,,no_workaround,no_workaround,0.406,True,True
+NS-0042,n8n-io/n8n,34490,[Bug]: n8n v2.30.7 hangs after DB migrations on Windows (Node 24) — all routes return 404,bug_report,no_workaround,1,explicit_workaround,workaround,no_workaround,0.4922,False,True
+NS-0043,n8n-io/n8n,34961,"Instance-level MCP OAuth: token exchange fails with ""code_verifier does not match the challenge"" (InvalidGrantError) after successful consent",user_confusion,no_workaround,2,manual_process | only_method,workaround,no_workaround,0.4908,False,True
+NS-0044,n8n-io/n8n,34947,MCP tool update_workflow does not support setting availableInMCP via setWorkflowSettings,workaround,workaround,1,manual_process,workaround,no_workaround,0.4768,True,False
+NS-0045,n8n-io/n8n,34839,All production webhooks returning 404 on my n8n Cloud account,bug_report,no_workaround,0,,no_workaround,no_workaround,0.4096,True,True
+NS-0046,n8n-io/n8n,34970,Google Service Account Impersonation failing validation (but working),workaround,workaround,0,,no_workaround,no_workaround,0.4521,False,False
+NS-0047,n8n-io/n8n,34916,"Salesforce node (OAuth2): refresh silently drops oauthTokenData.instance_url, causing ""Invalid URL"" (ERR_INVALID_URL) until manual reconnect",workaround,workaround,1,manual_process,workaround,no_workaround,0.4861,True,False
+NS-0048,n8n-io/n8n,34669,Postgres workflow statistics rollup crashes when firstEvent is returned as a non-Date value,workaround,workaround,1,repetition,workaround,workaround,0.5072,True,True
+NS-0049,n8n-io/n8n,34618,HTTP node never fires pagination request,user_confusion,no_workaround,0,,no_workaround,no_workaround,0.3949,True,True
+NS-0050,n8n-io/n8n,34713,Instance-level MCP (2.31.4): valid OAuth access token with correct audience rejected by MCP endpoint — Claude connector fails with McpAuthorizationError after successful consent,bug_report,no_workaround,2,manual_process | alternative_method,workaround,workaround,0.5183,False,False
+NS-0051,n8n-io/n8n,34488,Sustained 401 storm on GET /workflows/:id/collaboration/write-lock from a single tab (suspected leaked poll interval),bug_report,no_workaround,1,repetition,workaround,workaround,0.5123,False,False
+NS-0052,n8n-io/n8n,34597,MCP Server Trigger execution succeeds but connected tools are not invoked,bug_report,no_workaround,1,manual_process,workaround,no_workaround,0.3929,False,True
+NS-0053,n8n-io/n8n,34521,Scheduled trigger bursts an error when minutes chosen,bug_report,no_workaround,0,,no_workaround,no_workaround,0.3707,True,True
+NS-0054,n8n-io/n8n,34829,"AWS S3: SignatureDoesNotMatch on object keys containing ""="" or "":"" (path signed un-encoded, sent percent-encoded) — regression in 2.31.5",workaround,workaround,2,explicit_workaround | data_transfer,workaround,no_workaround,0.3834,True,False
+NS-0055,n8n-io/n8n,34590,"Notion node: 'Get Many' with formula filter still fails with 'Unable to filter based on a formula of unknown type' after ""fix"" in 2.31.0",bug_report,no_workaround,1,manual_process,workaround,no_workaround,0.3857,False,True
+NS-0056,n8n-io/n8n,34637,ad,not_actionable,no_workaround,0,,no_workaround,no_workaround,0.3758,True,True
+NS-0057,n8n-io/n8n,34676,Touchscreen on canvas stops working after sending any keystroke,workaround,workaround,1,alternative_method,workaround,no_workaround,0.4694,True,False
+NS-0058,n8n-io/n8n,34515,"Wait node (""On Form Submitted"") resumeUrl returns 404 in production, but works fine in manual/test execution — path changes from /form-waiting/ to /webhook-waiting/",bug_report,no_workaround,2,manual_process | alternative_method,workaround,no_workaround,0.4437,False,True
+NS-0059,n8n-io/n8n,34818,"n8n api Audit ""Credentials"" causes n8n to crash.",bug_report,no_workaround,0,,no_workaround,no_workaround,0.3197,True,True
+NS-0060,n8n-io/n8n,34409,Extract From File (XLSX) returns Excel serial numbers for date cells even when RAW Data is disabled,bug_report,no_workaround,1,alternative_method,workaround,no_workaround,0.4766,False,True

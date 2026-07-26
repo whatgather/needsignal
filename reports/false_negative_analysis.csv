@@ -1,0 +1,1210 @@
+annotation_id,issue_number,title,probability,behavioral_cue_count,behavioral_cues,user_goal,obstacle,workaround,human_cost,underlying_need,evidence_quote,thread_text
+NS-0003,34812,Unable to use AI builder on n8n,0.4265,4,constraint_language | manual_intervention | repetition_or_retry | multi_step_sequence,Create and maintain a Facebook Lead Ads to SuiteCRM workflow.,The n8n AI Builder is unavailable.,Create and update the workflow manually.,"More setup time, cognitive effort, and manual configuration.",Reliable AI-assisted workflow creation and editing.,"I am unable to use the n8n AI Builder, so I am creating and updating the workflow manually.","TITLE:
+Unable to use AI builder on n8n
+
+ISSUE DESCRIPTION:
+## Describe the problem/error/question
+
+I am building an n8n workflow that receives Facebook Lead Ads submissions and creates leads in SuiteCRM.
+
+The workflow is working, but I am concerned about what happens when two or more people submit the Facebook form at nearly the same time.
+
+My n8n execution concurrency is set to 5. I want to confirm whether both submissions will be processed independently or whether simultaneous submissions could cause one execution to fail, overwrite another lead, or prevent a lead from being saved in SuiteCRM.
+
+I am unable to use the n8n AI Builder, so I am creating and updating the workflow manually.
+
+I would also appreciate guidance on making the workflow production-ready, including:
+
+* Preventing duplicate leads
+* Handling simultaneous form submissions safely
+* Retrying SuiteCRM requests when an API request fails
+* Preventing one failed execution from affecting other submissions
+* Logging failed submissions for manual review
+* Ensuring every Facebook lead is saved in SuiteCRM
+
+## What is the error message (if any)?
+
+There is currently no consistent error message.
+
+My main concern is whether simultaneous Facebook form submissions could cause errors or missing leads when the workflow sends data to SuiteCRM.
+
+## Share the output returned by the last node
+
+The last node sends the lead information to SuiteCRM.
+
+For successful executions, SuiteCRM should return the newly created lead record ID.
+
+Example expected output:
+
+```json
+{
+ ""success"": true,
+ ""lead_id"": ""SUITECRM_LEAD_ID""
+}
+```
+
+For failed executions, I would like the workflow to capture the HTTP status code and error response, retry temporary failures, and store the original Facebook lead data for manual processing.
+
+## Debug info
+
+### core
+
+* n8nVersion: 2.31.5
+* platform: docker (cloud)
+* nodeJsVersion: 24.16.0
+* nodeEnv: production
+* database: sqlite
+* executionMode: regular
+* concurrency: 5
+* license: enterprise (sandbox)
+
+### storage
+
+* success: all
+* error: all
+* progress: false
+* manual: true
+* binaryMode: filesystem
+
+### pruning
+
+* enabled: true
+* maxAge: 168 hours
+* maxCount: 2500 executions
+
+### client
+
+* userAgent: mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/150.0.0.0 safari/537.36
+* isTouchDevice: false
+
+Generated at: 2026-07-23T17:19:22.827Z
+
+DISCUSSION:
+Thank you for taking the time to submit this issue! Unfortunately, it looks like the issue template hasn’t been fully completed. The template is crucial because it helps us understand the problem better and resolve it more efficiently.
+
+We’ll go ahead and close this issue for now. If you’d still like assistance, please feel free to reopen the issue after filling out the required information in the template. Alternatively, you can create a new issue using the template to provide the missing details.
+
+We appreciate your understanding and look forward to assisting you further once we have all the necessary information!
+
+--- COMMENT ---
+
+i edited the template can you please reopen this issue 
+thanks"
+NS-0035,34910,Editor UI: expanding the collapsed left sidebar renders an empty panel and pushes the main content off screen,0.4722,4,manual_intervention | alternative_method | repetition_or_retry | multi_step_sequence,Restore the editor after expanding the collapsed sidebar breaks the layout.,The expanded sidebar is blank and pushes the main content off screen.,Reload the page.,Interrupts work and must be repeated whenever the defect occurs.,A sidebar toggle that reflows the editor without corrupting the layout.,"Clicking the toggle again does not restore the layout, only a full page reload does.","TITLE:
+Editor UI: expanding the collapsed left sidebar renders an empty panel and pushes the main content off screen
+
+ISSUE DESCRIPTION:
+## Describe the problem/error/question
+
+Expanding the left sidebar from its collapsed (icon rail) state breaks the editor layout.
+
+When I click the expand/collapse toggle at the top of the sidebar:
+
+- The sidebar area expands, but the expanded panel renders empty: no menu labels
+ (Overview, Personal, Projects, Templates, Insights, Help, Settings), no project
+ list, just a blank dark area.
+- The icons stay stuck in the narrow collapsed rail on the far left instead of
+ moving with the expanded panel.
+- The main content area (workflow list / canvas) is pushed almost entirely out of
+ the viewport, only a few pixels remain visible on the right edge.
+- Clicking the toggle again does not restore the layout, only a full page reload does.
+
+This is not a one time glitch. It has been reproducible on every version I have
+used for at least the last 3 months (first noticed around 2.x.x), and it still
+happens on 2.32.3.
+
+### Steps to reproduce
+1. Open n8n with the left sidebar collapsed.
+2. Click the expand toggle at the top of the sidebar (panel icon, next to the search icon).
+3. Observe the blank expanded panel and the main content pushed off screen.
+
+### Expected behaviour
+The sidebar expands to its full width, showing the menu labels and the project list,
+and the main content area reflows next to it.
+
+### Actual behaviour
+Blank expanded panel, icons left behind in the collapsed rail, main content pushed
+out of the viewport, recoverable only with a page reload.
+
+### Environment notes
+- Chrome 150 on macOS, browser zoom at 100%.
+- Dark theme.
+- Also reproduced in an incognito window with all extensions disabled.
+
+## What is the error message (if any)?
+
+No error message shown in the UI. Browser console: (paste errors here, or ""no errors"")
+
+## Please share your workflow/screenshots/recording
+
+Not workflow specific, it happens on any page of the editor.
+
+Screenshot of the broken state: (attach)
+Screen recording: (attach)
+
+## Share the output returned by the last node
+
+N/A, this is a UI rendering issue, not a workflow execution problem.
+
+<img width=""777"" height=""800"" alt=""Image"" src=""https://github.com/user-attachments/assets/04b39dbf-feb6-45b1-8b0a-c03768267f06"" />"
+NS-0047,34916,"Salesforce node (OAuth2): refresh silently drops oauthTokenData.instance_url, causing ""Invalid URL"" (ERR_INVALID_URL) until manual reconnect",0.4861,4,manual_intervention | repetition_or_retry | multi_step_sequence | successful_compensation,Keep scheduled Salesforce workflows authenticated.,"Token refresh drops instance_url, causing every Salesforce request to fail.",Manually reconnect the Salesforce OAuth credential whenever it breaks.,"Recurring manual intervention, workflow downtime, and repeated failures.",Preserve Salesforce instance_url across OAuth refreshes.,Manually reconnecting the credential (full OAuth authorize flow) fixes it immediately.,"TITLE:
+Salesforce node (OAuth2): refresh silently drops oauthTokenData.instance_url, causing ""Invalid URL"" (ERR_INVALID_URL) until manual reconnect
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+Self-hosted n8n (queue mode, PostgreSQL). A workflow using the **Salesforce** node with a **Salesforce OAuth2 API** credential works fine for a period (intraday token refreshes succeed), then starts failing every execution with:
+
+```
+NodeApiError: Invalid URL
+httpCode: ERR_INVALID_URL
+```
+
+Manually reconnecting the credential (full OAuth authorize flow) fixes it immediately - but it breaks again after the next background token refresh cycle, in a repeatable ""works after reconnect, dies again after ~a day"" pattern. Same Salesforce org, different dedicated integration user/Connected App works fine on a separate (dev) n8n instance running identical n8n version/config.
+
+### Root Cause (traced from an actual failing execution)
+
+`packages/nodes-base/nodes/Salesforce/GenericFunctions.ts` builds every API request URL from the credential's stored OAuth token data:
+
+```ts
+const credentials = await this.getCredentials<{ oauthTokenData: { instance_url: string } }>('salesforceOAuth2Api');
+const options = getOptions.call(this, method, uri || endpoint, body, qs,
+ credentials.oauthTokenData.instance_url);
+...
+uri: `${instanceUrl}/services/data/${SALESFORCE_API_VERSION}${endpoint}`
+```
+
+When `oauthTokenData.instance_url` is empty/undefined, this produces something like `""undefined/services/data/v59.0/...""`, which Node's `URL` parser rejects with `ERR_INVALID_URL` - exactly the error surfaced to the user, with a stack trace rooted at `GenericFunctions.ts:192` (`salesforceApiRequest`).
+
+The reason `instance_url` goes missing: `packages/core/src/execution-engine/node-execution-context/utils/request-helpers/oauth.ts`, in the generic OAuth2 token-refresh path, merges old and refreshed token data like this:
+
+```ts
+const newOAuthTokenData = addExpiresAt({ ...token.data, ...newToken.data });
+
+// If the server doesn't echo the resource back, restore it from the
+// previous token data to ensure it's not lost on refresh.
+if (!newOAuthTokenData.resource && token.data.resource) {
+ newOAuthTokenData.resource = token.data.resource;
+}
+```
+
+There's an explicit, deliberate fallback to preserve **only** the `resource` field if the authorization server's refresh response doesn't echo it back. There is no equivalent protection for any other non-standard field a credential type may depend on - such as Salesforce's `instance_url`, which the Salesforce node requires on every request but which isn't part of the generic OAuth2 core.
+
+If a refresh-grant response from the auth server ever omits `instance_url` (for whatever server-side reason - scope config, session policy, etc.), n8n has no fallback and the credential is left permanently missing `instance_url` in its stored `oauthTokenData` until a full manual reconnect (fresh authorization-code grant) repopulates it. Every Salesforce node call fails with ""Invalid URL"" in the meantime, regardless of whether the access/refresh token itself is otherwise valid.
+
+This looks like the same underlying issue reported (without root cause) in #19945 - ""Salesforce OAuth not working properly"", which has multiple independent reporters describing the identical ""fails once a day, only fixed by reconnect"" symptom, unresolved since Sept 2025.
+
+### To Reproduce
+
+1. Create a Salesforce OAuth2 API credential (Connected App / External Client App, refresh token granted).
+2. Use it in a Salesforce node in a scheduled workflow.
+3. Let it run past the point where n8n performs a background OAuth2 token refresh.
+4. If the refresh-grant response from Salesforce doesn't include `instance_url`, every subsequent Salesforce node call fails with `Invalid URL` / `ERR_INVALID_URL` until the credential is manually reconnected.
+
+### Expected Behavior
+
+`instance_url` (and arguably any other non-standard field the original token response provided, e.g. `id`, `signature`) should be preserved across a refresh the same way `resource` already is - i.e., in `oauth.ts`, fall back to the previous `oauthTokenData` value for these fields when the refresh response doesn't include them, rather than only doing this for `resource`.
+
+### Environment
+
+- n8n version: 2.30.4
+- Execution mode: queue (main + workers)
+- Database: PostgreSQL
+- Hosting: self-hosted (Kubernetes/Helm)
+- Credential type: Salesforce OAuth2 API (`salesforceOAuth2Api`)"
+NS-0054,34829,"AWS S3: SignatureDoesNotMatch on object keys containing ""="" or "":"" (path signed un-encoded, sent percent-encoded) — regression in 2.31.5",0.3834,3,manual_intervention | alternative_method | multi_step_sequence,Download S3 objects whose keys contain equals signs or colons.,"n8n signs an unencoded path but sends a percent-encoded path, producing SignatureDoesNotMatch.",Percent-encode each key segment and use an HTTP Request node with an AWS credential and a path-style S3 URL.,Fragile custom URL construction that will break through double encoding after the signer is fixed.,AWS signing over the same canonical path that n8n transmits.,Percent-encode the key per path segment and fetch via HTTP Request + AWS credential over a path-style URL.,"TITLE:
+AWS S3: SignatureDoesNotMatch on object keys containing ""="" or "":"" (path signed un-encoded, sent percent-encoded) — regression in 2.31.5
+
+ISSUE DESCRIPTION:
+<!-- Please follow the template below. Skip the questions that are not relevant to you. -->
+
+## Describe the bug
+
+Downloading an S3 object whose key contains `=` or `:` fails with `403 SignatureDoesNotMatch`. This affects **any** Hive-partitioned S3 layout — Amazon Marketing Cloud, Athena/Glue query output, Spark/EMR output — where keys look like:
+
+```
+workflow=my_workflow_id/schedule=adhoc/2026-07-23T19:30:45.513Z-my_workflow_id.csv
+```
+
+n8n appears to compute the SigV4 signature over the **un-encoded** request path but transmit the **percent-encoded** path. AWS canonicalises the request it actually receives, so the string-to-sign never matches.
+
+Per RFC 3986, `=` and `:` are legal unencoded in a path segment, and the AWS SDKs do not encode them in S3 object keys — so the transmitted path is being over-encoded relative to what was signed.
+
+**This is not limited to the AWS S3 node.** The S3 node (V1 *and* V2) and the HTTP Request node with an AWS predefined credential all fail identically, because all three funnel through `requestWithAuthentication` → the AWS credential's signer.
+
+## Is this a regression?
+
+**Yes.** Identical workflows, node, credential, bucket and key shape ran successfully for weeks on **2.29.8** and began failing on **2.31.5** with no user-side change. The instance is n8n Cloud and was auto-upgraded between those versions.
+
+## To Reproduce
+
+1. Put an object in an S3 bucket with a key containing `=` and `:`, e.g.
+ `workflow=test_id/schedule=adhoc/2026-07-23T19:30:45.513Z-test_id.csv`
+2. Add an **AWS S3** node → Resource: File → Operation: Download → set Bucket and that File Key, with a valid AWS credential.
+3. Execute.
+
+**Result:** `403 SignatureDoesNotMatch`.
+
+**Control that passes:** the same credential against an operation whose canonical path has no special characters (e.g. Get Many / list on the bucket) succeeds — so the credential and secret are correct.
+
+## Expected behavior
+
+The object downloads. The signature should be computed over the same canonical URI that is transmitted.
+
+## Actual behavior — evidence
+
+Four tests, all with the **same credential**, in the same session. AWS's own `CanonicalRequest` (from the 403 body) is the key evidence:
+
+| # | Setup | SignedHeaders | Canonical path AWS saw | Result |
+|---|---|---|---|---|
+| A | S3 node — list bucket | `host;x-amz-content-sha256;x-amz-date` | `/` | **PASS** |
+| B | S3 node **V1** — download | `host;x-amz-content-sha256;x-amz-date` | `/workflow%3D…/…T19%3A30%3A45…csv` | FAIL |
+| C | S3 node **V2** — download | `host;x-amz-content-sha256;x-amz-date` | `/workflow%3D…/…T19%3A30%3A45…csv` | FAIL |
+| D | HTTP Request + AWS cred, virtual-hosted URL | — | — | FAIL, different error (see below) |
+| E | HTTP Request + AWS cred, path-style URL | `accept;host;x-amz-content-sha256;x-amz-date` | `/bucket/workflow%3D…/…T19%3A30%3A45…csv` | FAIL |
+| F | As E, but key **pre-percent-encoded** by the user | `accept;host;x-amz-content-sha256;x-amz-date` | same | **PASS** |
+
+Representative failing canonical request (test B):
+
+```
+GET
+/workflow%3Dmy_workflow_id/schedule%3Dadhoc/2026-07-23T19%3A30%3A45.513Z-my_workflow_id.csv
+
+host:my-bucket.s3.us-east-1.amazonaws.com
+x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+x-amz-date:20260723T193148Z
+
+host;x-amz-content-sha256;x-amz-date
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
+**Two conclusions from this table:**
+
+1. **The `accept` header is not the cause.** B and C did *not* sign `accept` and failed identically to E, which did. The only invariant across every failure is the percent-encoded path.
+2. **Test F is the smoking gun.** Supplying the key *already* percent-encoded makes signed == sent, and the request succeeds — confirming the signature is computed over the un-encoded form while the encoded form is transmitted.
+
+## Secondary bug — region parsed from hostname (test D)
+
+Using the HTTP Request node with an AWS predefined credential against a **virtual-hosted-style** S3 URL:
+
+```
+https://my-bucket.s3.us-east-1.amazonaws.com/<key>
+```
+
+fails with:
+
+```
+Unsupported AWS region ""s3"" parsed from endpoint host my-bucket.s3.us-east-1.amazonaws.com
+```
+
+The host is split on `.` and segment `[1]` is taken as the region — which is `""s3""` for virtual-hosted-style URLs. Only path-style (`s3.<region>.amazonaws.com/<bucket>/…`) parses correctly. Virtual-hosted-style is the AWS-recommended default, so this should be supported.
+
+## Workaround
+
+Percent-encode the key per path segment and fetch via HTTP Request + AWS credential over a **path-style** URL:
+
+```js
+const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+const downloadUrl = `https://s3.us-east-1.amazonaws.com/${bucket}/${encodedKey}`;
+```
+
+This is fragile by nature: **if the signer is fixed, this workaround will double-encode and break.** A proper fix in n8n is needed.
+
+## Environment
+
+- **n8n version:** 2.31.5 (Cloud) — regression from 2.29.8, where this worked
+- **Database:** n8n Cloud default
+- **Running n8n via:** n8n Cloud
+- **Operating system:** n/a (managed)
+- **Affected nodes:** `n8n-nodes-base.awsS3` (typeVersion 1 and 2), `n8n-nodes-base.httpRequest` (4.2) with `nodeCredentialType: aws`
+- **Stack (V2):** `n8n-nodes-base/nodes/Aws/S3/V2/GenericFunctions.ts:45` → `n8n-core/.../request-helpers/authentication.ts:263`
+
+## Impact
+
+Breaks every S3 read against Hive-partitioned prefixes — Amazon Marketing Cloud result delivery, Athena/Glue query output, Spark/EMR output. In our case it silently took down two production data pipelines; the only visible symptom was a 403 that reads like a credentials problem, which sends you chasing the wrong cause.
+
+## What is the error message (if any)?
+
+## Please share your workflow/screenshots/recording
+
+```
+(Select the nodes on your canvas and use the keyboard shortcuts CMD+C/CTRL+C and CMD+V/CTRL+V to copy and paste the workflow.)
+⚠️ WARNING ⚠️ If you have sensitive data in your workflow (like API keys), please remove it before sharing.
+```
+
+## Share the output returned by the last node
+<!-- If you need help with data transformations, please also share your expected output. -->
+
+## Debug info
+
+### core
+
+- n8nVersion: 2.31.5
+- platform: docker (cloud)
+- nodeJsVersion: 24.16.0
+- nodeEnv: production
+- database: sqlite
+- executionMode: regular
+- concurrency: 20
+- license: enterprise (sandbox)
+
+### storage
+
+- success: all
+- error: all
+- progress: false
+- manual: true
+- binaryMode: filesystem
+
+### pruning
+
+- enabled: true
+- maxAge: 720 hours
+- maxCount: 25000 executions
+
+### client
+
+- userAgent: mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/605.1.15 (khtml, like gecko) version/26.5.2 safari/605.1.15
+- isTouchDevice: false
+
+Generated at: 2026-07-23T22:55:15.040Z
+
+DISCUSSION:
+Hey @jpc312,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9067"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9067](https://linear.app/n8n/issue/GHC-9067)
+
+--- COMMENT ---
+
+Hi! I'd like to work on this issue. I have experience with AI/ML projects and this aligns well with my skills. I'll submit a PR soon! 🚀
+
+--- COMMENT ---
+
+Hey @jpc312,
+
+This was fixed as part of the work done in #34694 which should be available in the next release.
+
+--- COMMENT ---
+
+@Joffcom - fantastic, thanks for the update!
+
+--- COMMENT ---
+
+@Joffcom Thank you! When can we expect the next release, any ideas?"
+NS-0025,34548,The built-in LDAP module does not work,0.3925,3,constraint_language | manual_intervention | multi_step_sequence,Run LDAP searches in production.,The built-in LDAP node times out and cannot load options.,Install and use the community n8n-nodes-ldap package until upgrading fixes the built-in node.,Dependency on a separate community package and additional maintenance.,Reliable built-in LDAP support across Windows Server environments.,But in prod environment only n8n-nodes-ldap@0.1.10 works on Windows Server 2022 Standard.,"TITLE:
+The built-in LDAP module does not work
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+Hello!
+
+I try to configure built-in LDAP on n8n 2.21.5 (docker.io/n8nio/n8n:2.21.5).
+Search For and Attribute got and error: ""Error fetching options from Ldap"".
+Also if I run then got and error ""UnbindRequest: Operation timed out"".
+
+However n8n-nodes-ldap@0.1.10 works without an error when I install it.
+
+### To Reproduce
+
+1. Go to Workflows
+2. Create workflow
+3. Add steps:
+ - Trigger manually
+ - LDAP
+4. Configure LDAP
+ - Credential: LDAP account
+ - Operation: Search
+ - Base DN: dc=example,dc=local
+ - Search For: Error fetching options from Ldap
+ - Attribute: Error fetching options from Ldap
+ - Search Text:
+5. Reopen LDAP configuration window
+6. Click on 'Execute step'
+7. See error
+
+### Expected behavior
+
+Search For and Attribute fields should contains data. Execute Step should fetch data to OUTPUT.
+
+### Debug Info
+
+Container logs:
+
+2026-07-20T09:29:58.310Z | error | UnbindRequest: Operation timed out
+Error: UnbindRequest: Operation timed out
+ at Timeout._onTimeout (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/ldapts@4.2.6/node_modules/ldapts/Client.ts:892:29)
+ at listOnTimeout (node:internal/timers:605:17)
+ at processTimers (node:internal/timers:541:7)
+ {""file"":""error-reporter.js"",""function"":""defaultReport""}
+2026-07-20T09:29:58.853Z | error | UnbindRequest: Operation timed out
+Error: UnbindRequest: Operation timed out
+ at Timeout._onTimeout (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/ldapts@4.2.6/node_modules/ldapts/Client.ts:892:29)
+ at listOnTimeout (node:internal/timers:605:17)
+ at processTimers (node:internal/timers:541:7)
+ {""file"":""error-reporter.js"",""function"":""defaultReport""}
+2026-07-20T09:29:59.581Z | error | timeout of 6000ms exceeded
+AxiosError: timeout of 6000ms exceeded
+ at createTimeoutError (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/axios@1.16.0/node_modules/axios/lib/adapters/http.js:489:16)
+ at RedirectableRequest.handleTimeout (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/axios@1.16.0/node_modules/axios/lib/adapters/http.js:1119:17)
+ at RedirectableRequest.emit (node:events:509:28)
+ at Timeout._onTimeout (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/follow-redirects@1.16.0/node_modules/follow-redirects/index.js:233:12)
+ at listOnTimeout (node:internal/timers:605:17)
+ at processTimers (node:internal/timers:541:7)
+ at Axios.request (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/axios@1.16.0/node_modules/axios/lib/core/Axios.js:46:41)
+ at processTicksAndRejections (node:internal/process/task_queues:104:5)
+ at paginatedRequest (/usr/local/lib/node_modules/n8n/src/modules/community-packages/strapi-utils.ts:57:15)
+ at getCommunityNodeTypes (/usr/local/lib/node_modules/n8n/src/modules/community-packages/community-node-types-utils.ts:54:9)
+ at CommunityNodeTypesService.fetchNodeTypes (/usr/local/lib/node_modules/n8n/src/modules/community-packages/community-node-types.service.ts:91:13)
+ at CommunityNodeTypesService.getCommunityNodeTypes (/usr/local/lib/node_modules/n8n/src/modules/community-packages/community-node-types.service.ts:211:4)
+ at CommunityNodeTypesController.getCommunityNodeTypes (/usr/local/lib/node_modules/n8n/src/modules/community-packages/community-node-types.controller.ts:18:10)
+ at handler (/usr/local/lib/node_modules/n8n/src/controller.registry.ts:111:12)
+ at /usr/local/lib/node_modules/n8n/src/response-helper.ts:118:17
+ {""file"":""error-reporter.js"",""function"":""defaultReport""}
+2026-07-20T09:29:59.581Z | error | Error while fetching community nodes: timeout of 6000ms exceeded {""file"":""strapi-utils.js"",""function"":""paginatedRequest""}
+
+### Operating System
+
+Debian 12
+
+### n8n Version
+
+2.21.5
+
+### Node.js Version
+
+24.15.0
+
+### Database
+
+PostgreSQL
+
+### Execution mode
+
+main (default)
+
+### Hosting
+
+self hosted
+
+DISCUSSION:
+Hey @kovkyr,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9025"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9025](https://linear.app/n8n/issue/GHC-9025)
+
+--- COMMENT ---
+
+@kovkyr Which LDAP provider are you using? I have a workflow running that tests the node against OpenLDAP and it seems to be working on the latest release.
+
+--- COMMENT ---
+
+@Joffcom Windows Server 2022 Standard
+
+In test environment both built-in and n8n-nodes-ldap@0.1.10 works on Windows Server 2019 Standard. Built-in node works after n8n-nodes-ldap@0.1.10 node unistall.
+
+But in prod environment only n8n-nodes-ldap@0.1.10 works on Windows Server 2022 Standard.
+
+--- COMMENT ---
+
+Just updated n8n containers version from 2.21.5 to 2.31.4 and built-in LDAP working now on Windows Server 2022 Standard ldap provider. The problem can be closed."
+NS-0057,34676,Touchscreen on canvas stops working after sending any keystroke,0.4694,3,alternative_method | repetition_or_retry | multi_step_sequence,Continue using touch gestures on the workflow canvas after typing.,Any keyboard input disables canvas pinch-to-zoom and drag gestures.,Refresh the browser to restore touch functionality.,Repeated interruption and loss of canvas context after every keyboard interaction.,Keyboard shortcuts that do not disable touchscreen canvas controls.,"To restore functionality, I must refresh the browser.","TITLE:
+Touchscreen on canvas stops working after sending any keystroke
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+On the initial load of a workflow, the touchscreen functions flawlessly, enabling pinch-to-zoom and drag-to-move the canvas (both with one and two fingers). However, after pressing any key on a physical or virtual keyboard, the touchscreen ceases to function. Pinch-zooming and dragging the canvas are no longer possible, and instead, the entire page is zoomed and dragged, rather than the canvas. To restore functionality, I must refresh the browser. I can still open a node by double-tapping it and reposition it using touch and drag.
+
+I’m using iPad and tried Safari, Chrome, Firefox and Opera but the behavior is still the same with desktop mode or mobile mode.
+
+It's possible that the keyboard shortcuts causing this problem and if we can disable it via settings or environment variables that would be great.
+
+### To Reproduce
+
+1. Go to any workflow.
+2. Test pinching to zoom and drag the canvas.
+3. Hit any key in the keyboard
+4. Repeat step 2
+
+### Expected behavior
+
+I would like to get the same behavior like what I did on Step 2.
+
+### Debug Info
+
+# Debug info
+
+## core
+
+- n8nVersion: 2.0.2
+- platform: npm
+- nodeJsVersion: 22.20.0
+- nodeEnv: undefined
+- database: postgres
+- executionMode: regular
+- concurrency: -1
+- license: enterprise (production)
+- consumerId: 181e5a98-f16b-4f95-8e0b-cddb9398ba90
+
+## storage
+
+- success: all
+- error: all
+- progress: false
+- manual: true
+- binaryMode: filesystem
+
+## pruning
+
+- enabled: true
+- maxAge: 336 hours
+- maxCount: 10000 executions
+
+## client
+
+- userAgent: mozilla/5.0 (macintosh; intel mac os x 10_15_7) applewebkit/537.36 (khtml, like gecko) chrome/143.0.0.0 safari/537.36
+- isTouchDevice: false
+
+### Operating System
+
+MacOS
+
+### n8n Version
+
+2.0.2
+
+### Node.js Version
+
+24
+
+### Database
+
+PostgreSQL
+
+### Execution mode
+
+main (default)
+
+### Hosting
+
+self hosted"
+NS-0034,34906,MCP server: update_workflow on an ACTIVE workflow fails with SQLITE_ERROR: no such column: distinctAlias.SharedWorkflow_projectId (2.31.5),0.3944,2,manual_intervention | multi_step_sequence,Update an active workflow through the MCP update tool.,MCP updates on active SQLite workflows fail with a missing-column error.,"Deactivate the workflow before the MCP update, or edit and save it manually in the UI.",Introduces downtime or manual context switching and prevents end-to-end automation.,Reliable MCP updates for active workflows.,Deactivate the same workflow and repeat the identical call → succeeds.,"TITLE:
+MCP server: update_workflow on an ACTIVE workflow fails with SQLITE_ERROR: no such column: distinctAlias.SharedWorkflow_projectId (2.31.5)
+
+ISSUE DESCRIPTION:
+<!-- Please follow the template below. Skip the questions that are not relevant to you. -->
+
+## Describe the problem/error/question
+
+Using the built-in **n8n MCP server** (`/mcp-server/http`), the workflow-update tool
+(applying `setWorkflowSettings` / any node or settings change) fails for any **active**
+workflow with a SQLite error. The same operation on an **inactive** workflow succeeds,
+and editing/saving the same active workflow through the **n8n editor UI** also works.
+
+This started after our instance moved to 2.31.5 (the same MCP-driven edits worked for
+the prior ~week). It looks like a regression in the update path that runs when an active
+workflow is saved (trigger re-registration), where a DISTINCT/paginated query orders by
+`SharedWorkflow.projectId` but that column isn't present in the distinct subquery on SQLite.
+
+### Steps to reproduce
+1. On a SQLite-backed instance, take any **active** workflow.
+2. Via the MCP server, call the update-workflow tool with a trivial op
+ (e.g. `setWorkflowSettings` → `errorWorkflow`, or move a node).
+3. Request fails with the error below; nothing is saved.
+4. Deactivate the same workflow and repeat the identical call → **succeeds**.
+5. Re-activate and edit/save via the **UI** → **succeeds**.
+
+### Scope observed
+- ❌ MCP update on **active** workflows (reproducible on every one tried)
+- ✅ MCP update on **inactive** workflows
+- ✅ UI save on active workflows
+- ✅ MCP reads, workflow executions, and scheduled/webhook runs all healthy
+
+## What is the error message (if any)?
+SQLITE_ERROR: no such column: distinctAlias.SharedWorkflow_projectId
+
+## What is the error message (if any)?
+
+## Please share your workflow/screenshots/recording
+
+Not workflow-specific — reproduces on any active workflow with a trivial settings update,
+so no workflow content is required. (Happy to attach a minimal example on request; nothing
+sensitive is involved in triggering it.)
+
+## Share the output returned by the last node
+
+N/A — the request fails at the persistence/save step before any node output; the API
+returns only the SQLITE_ERROR above.
+```
+(Select the nodes on your canvas and use the keyboard shortcuts CMD+C/CTRL+C and CMD+V/CTRL+V to copy and paste the workflow.)
+⚠️ WARNING ⚠️ If you have sensitive data in your workflow (like API keys), please remove it before sharing.
+```
+
+## Share the output returned by the last node
+<!-- If you need help with data transformations, please also share your expected output. -->
+
+## Debug info
+
+### core
+
+- n8nVersion: 2.31.5
+- platform: docker (cloud)
+- nodeJsVersion: 24.16.0
+- nodeEnv: production
+- database: sqlite
+- executionMode: regular
+- concurrency: 200
+- license: enterprise (production)
+
+### storage
+
+- success: all
+- error: all
+- progress: false
+- manual: true
+- binaryMode: filesystem
+
+### pruning
+
+- enabled: true
+- maxAge: 720 hours
+- maxCount: 25000 executions
+
+### client
+
+- userAgent: mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/150.0.0.0 safari/537.36
+- isTouchDevice: false
+
+Generated at: 2026-07-24T13:29:10.954Z"
+NS-0017,34640,Imported workflow shows missing credentials until node dialog is opened,0.4,2,manual_intervention | multi_step_sequence,Use an imported workflow with its assigned credentials.,Imported nodes show false missing-credential warnings.,Open and close each affected node so n8n reselects a credential of the same type.,Repetitive manual work and uncertainty about whether credentials are actually valid.,Correct credential-state reconciliation immediately after workflow import.,"If the user opens an affected node in the node dialog (NDV) and closes it without changing anything, the warning disappears.","TITLE:
+Imported workflow shows missing credentials until node dialog is opened
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+When importing a workflow JSON, some nodes show a red missing-credentials indicator even though credentials are already assigned in the imported JSON.
+
+If the user opens an affected node in the node dialog (NDV) and closes it without changing anything, the warning disappears and the node executes normally.
+
+This appears to be a stale credential-issue state after import in the editor UI.
+
+### Steps to Reproduce
+
+1. Create credentials in n8n (for example OpenAI or a community-node credential).
+2. Import a workflow JSON where nodes already have credentials set.
+3. Observe that imported nodes show missing-credentials warnings.
+4. Open an affected node and close it without changes.
+5. Observe that the warning disappears.
+
+### Expected Behavior
+
+Credential issues should be resolved correctly immediately after import, without requiring opening each node.
+
+### Debug Info
+
+N/A (can provide if needed)
+
+### Operating System
+
+Linux
+
+### n8n Version
+
+master (current as of 2026-07-21)
+
+### Node.js Version
+
+22.21.1
+
+### Database
+
+N/A
+
+### Execution Mode
+
+N/A
+
+### Hosting
+
+Self-hosted (local dev)
+
+DISCUSSION:
+Hey @Anchel123,
+
+Thank you for reaching out! We’ve received your issue and are looking into it. To help us track this internally, we’ve created a Linear ticket with the reference: ""GHC-9038"".
+
+We’ll keep you updated as we make progress, but if you have any additional details or context to share, feel free to add them here - it’s always helpful!
+
+Thanks for your patience and for bringing this to our attention.
+
+---
+> For *INTERNAL* use only: [GHC-9038](https://linear.app/n8n/issue/GHC-9038)
+
+--- COMMENT ---
+
+It doesn’t, because you are importing a workflow that references a credential which does not exist in the instance (ID does not exist). When you open the node, we automatically select a credential of the same type, assuming one is available. This is intentional behavior and more of a feature than a bug."
+NS-0046,34970,Google Service Account Impersonation failing validation (but working),0.4521,2,constraint_language | manual_intervention,Use an impersonated Google service account for non-Sheets APIs.,The credential test incorrectly validates hardcoded Sheets scopes and reports failure.,Save the credential despite the failed test and use it through the HTTP Request node.,"Misleading validation, unnecessary debugging, and reduced confidence in credential status.",Credential tests that validate the scopes actually configured by the user.,Save anyway and use it from an HTTP Request node against GET https://www.googleapis.com/calendar/v3/calendars/{id}/events → works correctly.,"TITLE:
+Google Service Account Impersonation failing validation (but working)
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+## Title
+
+`googleApi` credential test always requests hardcoded Google **Sheets** scopes, so it can never pass with ""Impersonate a User"" enabled unless the domain granted Sheets/Drive scopes.
+
+<img width=""1211"" height=""779"" alt=""Image"" src=""https://github.com/user-attachments/assets/ee4defb6-9b89-43c1-89df-45efa2dc8754"" />
+
+## Description
+
+The **Google Service Account API** (`googleApi`) credential is shared across Calendar, BigQuery, Chat, Vertex, Gmail, Drive, Sheets and the HTTP Request node. Its **Test** button always authenticates using the hardcoded `sheetV2` scope set, ignoring the credential's own `Scope(s)` field.
+
+With **Impersonate a User** OFF this is invisible: `sub` is the service account itself, so it is a plain two-legged JWT flow with no domain-wide-delegation check, and Google issues a token for essentially any scope. The test goes green while proving nothing.
+
+With **Impersonate a User** ON, `sub` becomes the delegated user, Google performs the DWD authorization check - against **Sheets/Drive scopes the user never asked for** - and returns:
+
+```sh
+Private key validation failed: 401 - {""error"":""unauthorized_client"", ""error_description"":""Client is unauthorized to retrieve access tokens using this method, or client not authorized for any of the scopes requested.""}
+```
+
+For anyone using this credential for a non-Sheets service, the test is **structurally incapable of passing**. My case: Google Calendar via the HTTP Request node, DWD granted for `https://www.googleapis.com/auth/calendar.readonly` only.
+
+## Analysis (claude)
+
+`googleApi` declares no `test` of its own. Its only `testedBy` binding is contributed by the Google Sheets node:
+
+**[`packages/nodes-base/nodes/Google/Sheet/v2/actions/versionDescription.ts#L77-L84`](https://github.com/n8n-io/n8n/blob/n8n%402.32.5/packages/nodes-base/nodes/Google/Sheet/v2/actions/versionDescription.ts#L77-L84)**
+
+```ts
+name: 'googleApi',
+...
+testedBy: 'googleApiCredentialTest',
+```
+
+**[`packages/nodes-base/nodes/Google/Sheet/v2/methods/credentialTest.ts#L14`](https://github.com/n8n-io/n8n/blob/n8n%402.32.5/packages/nodes-base/nodes/Google/Sheet/v2/methods/credentialTest.ts#L14)**
+
+```ts
+const tokenRequest = await getGoogleAccessToken.call(this, credential.data!, 'sheetV2');
+// ^^^^^^^^^
+```
+
+**[`packages/nodes-base/nodes/Google/GenericFunctions.ts#L43-L47`](https://github.com/n8n-io/n8n/blob/n8n%402.32.5/packages/nodes-base/nodes/Google/GenericFunctions.ts#L43-L47)**
+
+```ts
+sheetV2: [
+ 'https://www.googleapis.com/auth/drive.file',
+ 'https://www.googleapis.com/auth/spreadsheets',
+ 'https://www.googleapis.com/auth/drive.metadata',
+],
+```
+
+**[`packages/nodes-base/nodes/Google/GenericFunctions.ts#L87-L98`](https://github.com/n8n-io/n8n/blob/n8n%402.32.5/packages/nodes-base/nodes/Google/GenericFunctions.ts#L87-L98)**
+
+```ts
+const scopes = googleServiceAccountScopes[service]; // ← 'sheetV2', always
+...
+const signature = jwt.sign({
+ iss: credentials.email,
+ sub: credentials.delegatedEmail || credentials.email, // ← impersonation toggles the DWD check
+ scope: scopes.join(' '), // ← user's Scope(s) field never read
+ aud: 'https://oauth2.googleapis.com/token',
+```
+
+Meanwhile the credential's **runtime** signer does read the user's field:
+
+**[`packages/nodes-base/credentials/GoogleApi.credentials.ts#L330-L347`](https://github.com/n8n-io/n8n/blob/n8n%402.32.5/packages/nodes-base/credentials/GoogleApi.credentials.ts#L330-L347)**
+
+```ts
+async authenticate(credentials, requestOptions) {
+ if (!credentials.httpNode) return requestOptions;
+ const credentialsScopes = (credentials.scopes as string).replace(/\\n/g, '\n').trim();
+ ...
+ sub: credentials.delegatedEmail || credentials.email,
+ scope: scopes, // ← the user's Scope(s) field
+```
+
+**So the test and the runtime disagree about what this credential is for.** The runtime is right; the test is wrong.
+
+### To Reproduce
+
+1. Create a GCP service account, download the JSON key, enable **Google Calendar API**.
+2. Admin console → Security → API controls → **Domain-wide delegation** → authorize the SA's client ID for exactly `https://www.googleapis.com/auth/calendar.readonly`.
+3. n8n → Credentials → **Google Service Account API**:
+ - Service Account Email + Private Key from the JSON
+ - **Set up for use in HTTP Request node** = ON
+ - Scope(s) = `https://www.googleapis.com/auth/calendar.readonly`
+ - **Impersonate a User** = OFF → **Test passes** (misleadingly)
+4. Set **Impersonate a User** = ON, Email = a real Workspace user → **Test fails** with `unauthorized_client`.
+5. Save anyway and use it from an HTTP Request node against `GET https://www.googleapis.com/calendar/v3/calendars/{id}/events` → **works correctly**.
+
+### Expected behavior
+
+The test should validate the scopes the credential is actually configured for. Specifically: when `httpNode` is true, request `credentials.scopes` rather than `sheetV2`. Failing that, the credential should not advertise a test it cannot satisfy, or should surface *which* scopes it just tried so the error is diagnosable.
+
+At minimum, include the attempted scopes in the failure message - the current text (`Private key validation failed`) points at the private key, which is the one thing that is not wrong, and sends everyone down a PEM-formatting rabbit hole.
+
+### Debug Info
+
+# Debug info
+
+## core
+
+- n8nVersion: 2.32.5
+- platform: docker (self-hosted)
+- nodeJsVersion: 24.18.0
+- nodeEnv: production
+- database: postgres
+- executionMode: regular
+- concurrency: -1
+- license: community
+- consumerId: unknown
+
+## storage
+
+- success: all
+- error: all
+- progress: false
+- manual: true
+- binaryMode: filesystem
+
+## pruning
+
+- enabled: true
+- maxAge: 336 hours
+- maxCount: 10000 executions
+
+## client
+
+- userAgent: mozilla/5.0 (x11; linux x86_64) applewebkit/537.36 (khtml, like gecko) chrome/150.0.0.0 safari/537.36
+- isTouchDevice: false
+
+## security
+
+- secureCookie: false
+
+## cluster
+
+- instanceCount: 1
+- versions: 2.32.5
+- instances:
+ - instanceKey: f82d3042-a816-4111-9aa8-45ec5c54d583, hostId: main-bbbf9c8856f0, instanceType: main, instanceRole: leader, version: 2.32.5
+- checks:
+ - check: hostid-clash, status: succeeded, warnings: -
+ - check: lifecycle, status: succeeded, warnings: -
+ - check: split-brain, status: succeeded, warnings: -
+ - check: version-mismatch, status: succeeded, warnings: -
+
+Generated at: 2026-07-26T06:56:09.602Z
+
+### Operating System
+
+Ubuntu Linux 24.04
+
+### n8n Version
+
+2.32.5
+
+### Node.js Version
+
+24
+
+### Database
+
+PostgreSQL
+
+### Execution mode
+
+main (default)
+
+### Hosting
+
+self hosted"
+NS-0014,34813,AI Builder is unavailable when creating an n8n workflow,0.454,2,constraint_language | manual_intervention,Generate or modify a workflow with AI Builder.,AI Builder does not complete the request.,Build the workflow manually.,Additional time and repetitive manual configuration.,A reliable AI Builder with actionable failure messages.,"Because of this, I have to build the workflow manually.","TITLE:
+AI Builder is unavailable when creating an n8n workflow
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+The AI Builder is not working in my n8n instance.
+
+When I try to use the AI Builder to create or modify a workflow, it does not generate the workflow successfully. Because of this, I have to build the workflow manually.
+
+This appears to be an issue with the AI Builder feature rather than with a specific workflow or node.
+
+### To Reproduce
+
+Open the n8n workflow editor.
+Create a new workflow.
+Open the AI Builder.
+Enter a prompt requesting a workflow.
+Submit the prompt.
+The AI Builder does not generate the workflow or complete the request.
+
+### Expected behavior
+
+The AI Builder should process the prompt and generate or update the requested workflow.
+
+If the request cannot be completed, it should display a clear error message explaining the reason.
+
+### Debug Info
+
+core
+
+n8nVersion: 2.31.5
+platform: docker (cloud)
+nodeJsVersion: 24.16.0
+nodeEnv: production
+database: sqlite
+executionMode: regular
+concurrency: 5
+license: enterprise (sandbox)
+
+storage
+
+success: all
+error: all
+progress: false
+manual: true
+binaryMode: filesystem
+
+pruning
+
+enabled: true
+maxAge: 168 hours
+maxCount: 2500 executions
+
+client
+
+userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+isTouchDevice: false
+
+Generated at: 2026-07-23T17:19:22.827Z
+
+### Operating System
+
+Windows 10 using n8n Cloud in a web browser
+
+### n8n Version
+
+2.31.5
+
+### Node.js Version
+
+24.16.0
+
+### Database
+
+SQLite (default)
+
+### Execution mode
+
+main (default)
+
+### Hosting
+
+n8n cloud"
+NS-0033,34955,"OAuth consent fails with ""Invalid or expired authorization session"" - n8n-oauth-session cookie hardcoded with Secure attribute ignoring N8N_SECURE_COOKIE=false",0.4604,2,alternative_method | multi_step_sequence,Complete MCP OAuth consent on an HTTP-hosted n8n instance.,The OAuth session cookie is always marked Secure and is dropped on plain HTTP.,Place n8n behind an HTTPS reverse proxy.,Requires extra infrastructure and configuration that should be unnecessary when secure cookies are disabled.,OAuth cookies that respect N8N_SECURE_COOKIE=false.,Confirmed workaround: putting n8n behind an HTTPS reverse proxy (e.g. Caddy) resolves the issue immediately.,"TITLE:
+OAuth consent fails with ""Invalid or expired authorization session"" - n8n-oauth-session cookie hardcoded with Secure attribute ignoring N8N_SECURE_COOKIE=false
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+When running n8n over plain HTTP with N8N_SECURE_COOKIE=false set, the OAuth/MCP consent flow fails. The n8n-oauth-session cookie is still being set with the Secure attribute regardless of this setting. Browsers silently drop Secure cookies on non-HTTPS origins, so the session cookie never gets stored. The subsequent request to /rest/consent/details then fails a browserId check, returning a generic ""Invalid or expired authorization session"" error, making it impossible to complete OAuth/MCP authorization on an HTTP-only n8n instance.
+
+Confirmed workaround: putting n8n behind an HTTPS reverse proxy (e.g. Caddy) resolves the issue immediately, since the cookie is honored once the origin is actually secure. This should not be required when N8N_SECURE_COOKIE=false is explicitly set, since that env var is documented as the way to disable Secure-cookie behavior for HTTP deployments.
+
+### To Reproduce
+
+1. Run n8n in Docker with N8N_SECURE_COOKIE=false and N8N_PROTOCOL=http (plain HTTP, no reverse proxy)
+2. 2. Enable Instance-level MCP under Settings
+3. 3. Configure an MCP client (e.g. Claude Desktop via mcp-remote) to connect via OAuth to http://<host>:5678/mcp-server/http
+4. 4. Start the OAuth flow and approve the consent screen when it appears
+5. 5. Observe the flow fails with ""Invalid or expired authorization session"" instead of completing
+6. 6. Inspect cookies in the browser: n8n-oauth-session is present in the Set-Cookie response header with the Secure attribute, but is never actually stored by the browser because the connection is HTTP, not HTTPS
+
+### Expected behavior
+
+The OAuth consent flow should complete successfully when N8N_SECURE_COOKIE=false is set on an HTTP-only instance, since that setting is documented as the way to allow the session cookie to work without HTTPS. The n8n-oauth-session cookie should be issued without the Secure attribute in this configuration so browsers actually store it, allowing /rest/consent/details to pass its browserId check.
+
+### Debug Info
+
+# Debug info
+
+## core
+
+- n8nVersion: 2.31.6
+- platform: docker (self-hosted)
+- nodeJsVersion: 24.16.0
+- nodeEnv: production
+- database: sqlite
+- executionMode: regular
+- concurrency: -1
+- license: enterprise (production)
+- consumerId: 5848be0d-2549-46e7-80d9-23d1f22cdffd
+
+## storage
+
+- success: all
+- error: all
+- progress: false
+- manual: true
+- binaryMode: filesystem
+
+## pruning
+
+- enabled: true
+- maxAge: 336 hours
+- maxCount: 10000 executions
+
+## client
+
+- userAgent: mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/150.0.0.0 safari/537.36
+- isTouchDevice: false
+
+## cluster
+
+- instanceCount: 1
+- versions: 2.31.6
+- instances:
+ - instanceKey: a1ca76c1-3a36-42a4-8194-37aa8ea7fbaf, hostId: main-c3f91fbcb85e, instanceType: main, instanceRole: leader, version: 2.31.6
+- checks:
+ - check: hostid-clash, status: succeeded, warnings: -
+ - check: lifecycle, status: succeeded, warnings: -
+ - check: split-brain, status: succeeded, warnings: -
+ - check: version-mismatch, status: succeeded, warnings: -
+
+Generated at: 2026-07-25T15:38:38.211Z
+
+### Operating System
+
+Debian 12 (LXC container on Proxmox)
+
+### n8n Version
+
+2.31.6
+
+### Node.js Version
+
+24.16.0
+
+### Database
+
+SQLite (default)
+
+### Execution mode
+
+main (default)
+
+### Hosting
+
+self hosted"
+NS-0044,34947,MCP tool update_workflow does not support setting availableInMCP via setWorkflowSettings,0.4768,2,constraint_language | manual_intervention,Disable a workflow's availableInMCP setting through MCP automation.,The MCP update tool does not recognise availableInMCP.,Toggle Available in MCP manually in the workflow Settings UI.,Breaks automation and requires manual editor access.,MCP tooling that can read and update availableInMCP.,"The only working method is manually toggling ""Available in MCP"" in the workflow's Settings menu.","TITLE:
+MCP tool update_workflow does not support setting availableInMCP via setWorkflowSettings
+
+ISSUE DESCRIPTION:
+### Bug Description
+
+When using the n8n MCP server's `update_workflow` tool with a `setWorkflowSettings` operation to set `availableInMCP`, the operation is rejected with the error: ""settings must specify at least one field"".
+
+This is related to but distinct from #27803 (which was fixed in 2.17.0 for the classic REST API `PUT /api/v1/workflows/{id}` endpoint). That fix does not appear to cover the MCP `update_workflow` tool itself — the `availableInMCP` field still does not appear to be a recognized field within `setWorkflowSettings` for MCP-based updates.
+
+As a result, workflows created via the MCP `create_workflow_from_code` tool (which automatically sets `availableInMCP: true`) cannot have this setting reverted to `false` through any MCP tool. The only working method is manually toggling ""Available in MCP"" in the workflow's Settings menu in the n8n editor UI.
+
+### To Reproduce
+
+1. Create a workflow via the MCP server using `create_workflow_from_code`. This automatically sets `availableInMCP: true`.
+2. Attempt to set it back to `false` using the `update_workflow` MCP tool with an operation like:
+ { ""type"": ""setWorkflowSettings"", ""settings"": { ""availableInMCP"": false } }
+3. The MCP server rejects the operation with: ""settings must specify at least one field""
+4. Confirm via `get_workflow_details` (MCP) that `availableInMCP` remains `true`, or manually check the workflow's Settings in the n8n editor UI.
+
+### Expected behavior
+
+The `update_workflow` MCP tool's `setWorkflowSettings` operation should accept `availableInMCP` as a valid field, allowing MCP clients to enable or disable MCP exposure programmatically — consistent with the fix already applied to the classic REST API in #27803.
+
+### Debug Info
+
+# Debug info
+
+## core
+
+- n8nVersion: 2.30.8
+- platform: docker (self-hosted)
+- nodeJsVersion: 24.16.0
+- nodeEnv: production
+- database: sqlite
+- executionMode: regular
+- concurrency: -1
+- license: enterprise (production)
+- consumerId: 1e6d57cf-8d85-40cb-8330-3d143c05ae3e
+
+## storage
+
+- success: all
+- error: all
+- progress: false
+- manual: true
+- binaryMode: filesystem
+
+## pruning
+
+- enabled: true
+- maxAge: 336 hours
+- maxCount: 10000 executions
+
+## client
+
+- userAgent: mozilla/5.0 (windows nt 10.0; win64; x64) applewebkit/537.36 (khtml, like gecko) chrome/150.0.0.0 safari/537.36 edg/150.0.0.0
+- isTouchDevice: false
+
+## cluster
+
+- instanceCount: 1
+- versions: 2.30.8
+- instances:
+ - instanceKey: fb6af57c-4184-48b2-9eba-d1ec243c3d38, hostId: main-e68f73aae992, instanceType: main, instanceRole: leader, version: 2.30.8
+- checks:
+ - check: hostid-clash, status: succeeded, warnings: -
+ - check: lifecycle, status: succeeded, warnings: -
+ - check: split-brain, status: succeeded, warnings: -
+ - check: version-mismatch, status: succeeded, warnings: -
+
+Generated at: 2026-07-25T08:42:43.141Z
+
+### Operating System
+
+Ubuntu Linux 24.04
+
+### n8n Version
+
+2.30.8
+
+### Node.js Version
+
+24.16.0
+
+### Database
+
+SQLite (default)
+
+### Execution mode
+
+main (default)
+
+### Hosting
+
+self hosted"

@@ -1,0 +1,8 @@
+{
+  "evaluated_records": 60,
+  "correct_predictions": 42,
+  "incorrect_predictions": 18,
+  "false_negatives": 12,
+  "false_positives": 6,
+  "accuracy": 0.7
+}
